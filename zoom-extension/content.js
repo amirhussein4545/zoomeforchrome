@@ -192,6 +192,20 @@ class ZoomBox {
       } else if (request.action === 'applySettings') {
         this.settings = request.settings;
         this.applySettingsToUI();
+      } else if (request.action === 'applyShortcuts') {
+        // اعمال شورت‌کات‌های جدید
+        if (request.shortcuts && request.shortcuts.toggleShortcut) {
+          this.settings.toggleShortcut = request.shortcuts.toggleShortcut;
+          if (this.toggleShortcutInput) {
+            this.toggleShortcutInput.value = request.shortcuts.toggleShortcut;
+          }
+        }
+        if (request.shortcuts && request.shortcuts.resetShortcut) {
+          this.settings.resetShortcut = request.shortcuts.resetShortcut;
+          if (this.resetShortcutInput) {
+            this.resetShortcutInput.value = request.shortcuts.resetShortcut;
+          }
+        }
       }
     });
   }

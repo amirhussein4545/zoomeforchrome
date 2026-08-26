@@ -1,5 +1,5 @@
 // background.js - سرویس ورکر برای مدیریت افزونه با قابلیت‌های پیشرفته
-// نسخه 3.0.0 - با پشتیبانی از شورت‌کات‌های داخلی
+// نسخه 4.0.0 - با پشتیبانی از مدیریت شورت‌کات‌ها در پنل
 
 // ذخیره تنظیمات پیش‌فرض
 const defaultSettings = {
@@ -19,13 +19,6 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.sync.set({ settings: defaultSettings });
     }
   });
-});
-
-// مدیریت کلیک روی آیکون افزونه - باز کردن پاپ‌آپ
-chrome.action.onClicked.addListener((tab) => {
-  // این هندلر فقط زمانی اجرا می‌شود که popup.html وجود نداشته باشد
-  // اما ما popup.html داریم، بنابراین این بخش برای سازگاری نگه داشته شده
-  console.log('Zoom Box extension clicked');
 });
 
 // گوش دادن به پیام‌ها از content script و popup
@@ -71,6 +64,61 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       });
       sendResponse({ success: true, settings: settingsToReset });
+    });
+    return true;
+  }
+  
+  // به‌روزرسانی شورت‌کات‌ها از پنل
+  if (request.action === 'updateShortcuts') {
+    chrome.storage.sync.get(['settings'], (result) => {
+      const settings = result.settings || defaultSettings;
+      const newSettings = {
+        ...settings,
+        toggleShortcut: request.shortcuts.toggleShortcut,
+        resetShortcut: request.shortcuts.resetShortcut
+      };
+      
+      chrome.storage.sync.set({ settings: newSettings }, () => {
+        // ارسال به تمام تب‌ها
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'applyShortcuts',
+              shortcuts: request.shortcuts
+            }).catch(() => {});
+          });
+        });
+        sendResponse({ success: true, settings: newSettings });
+      });
+    });
+    return true;
+  }
+  
+  // بازنشانی شورت‌کات‌ها
+  if (request.action === 'resetShortcuts') {
+    chrome.storage.sync.get(['settings'], (result) => {
+      const settings = result.settings || defaultSettings;
+      const newSettings = {
+        ...settings,
+        toggleShortcut: 'Ctrl+Shift+Z',
+        resetShortcut: 'Ctrl+Shift+R'
+      };
+      
+      chrome.storage.sync.set({ settings: newSettings }, () => {
+        // ارسال به تمام تب‌ها
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'applyShortcuts',
+              shortcuts: {
+                toggleShortcut: 'Ctrl+Shift+Z',
+                resetShortcut: 'Ctrl+Shift+R'
+              }
+            }).catch(() => {});
+          });
+        });
+        sendResponse({ success: true, settings: newSettings });
+      });
     });
     return true;
   }
