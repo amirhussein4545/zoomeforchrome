@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "7.0.0",
-  "description": "افزونه زوم حرفه‌ای با پنل تنظیمات در پاپ‌آپ و دکمه بازگشت به حالت عادی بدون رفرش",
+  "version": "8.0.0",
+  "description": "افزونه زوم حرفه‌ای با پنل تنظیمات شناور و بدون نیاز به رفرش",
   "permissions": [
     "storage",
     "tabs",
@@ -10,13 +10,12 @@
     "scripting"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_title": "کلیک کنید تا پنل تنظیمات باز شود",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
-    },
-    "default_title": "تنظیمات زوم"
+    }
   },
   "background": {
     "service_worker": "background.js"
