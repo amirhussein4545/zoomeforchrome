@@ -3,70 +3,242 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zoom Box - زوم با کشیدن کادر</title>
+  <title>Zoom Box Pro - تنظیمات و راهنما</title>
   <style>
     body {
-      width: 300px;
+      width: 380px;
       padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #39FF14 100%);
+      color: #87CEEB;
       margin: 0;
     }
     
     h1 {
-      font-size: 18px;
+      font-size: 22px;
       margin: 0 0 15px 0;
       text-align: center;
+      color: #39FF14;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
     }
     
-    .instructions {
-      background: rgba(255, 255, 255, 0.1);
+    .section {
+      background: rgba(0, 0, 0, 0.6);
       padding: 15px;
       border-radius: 8px;
-      font-size: 13px;
-      line-height: 1.6;
+      margin-bottom: 15px;
+      backdrop-filter: blur(10px);
+      border: 2px solid #39FF14;
+    }
+    
+    .section h2 {
+      font-size: 16px;
+      margin: 0 0 10px 0;
+      border-bottom: 1px solid #87CEEB;
+      padding-bottom: 8px;
+      color: #87CEEB;
     }
     
     .instructions ol {
       margin: 10px 0;
       padding-right: 20px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #ffffff;
     }
     
     .instructions li {
       margin-bottom: 8px;
     }
     
+    .shortcut-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 8px;
+      background: rgba(57, 255, 20, 0.1);
+      border-radius: 6px;
+      border: 1px solid #39FF14;
+    }
+    
+    .shortcut-name {
+      font-size: 13px;
+      color: #ffffff;
+    }
+    
+    .shortcut-key {
+      background: #000000;
+      color: #39FF14;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid #87CEEB;
+    }
+    
+    .settings-info {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #87CEEB;
+    }
+    
     .icon {
       text-align: center;
-      font-size: 40px;
+      font-size: 50px;
       margin: 10px 0;
     }
     
     .version {
       text-align: center;
       font-size: 11px;
-      opacity: 0.8;
-      margin-top: 15px;
+      color: #39FF14;
+      margin-top: 10px;
+    }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 2px solid #87CEEB;
+      border-radius: 8px;
+      background: #000000;
+      color: #39FF14;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      text-decoration: none;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(57, 255, 20, 0.4);
+      background: #39FF14;
+      color: #000000;
+      border-color: #39FF14;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0;
+    }
+    
+    .feature-list li {
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(57, 255, 20, 0.2);
+      color: #ffffff;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-list li:before {
+      content: "✓ ";
+      color: #39FF14;
+      font-weight: bold;
+      margin-left: 5px;
+    }
+    
+    .highlight {
+      color: #39FF14;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="icon">🔍</div>
-  <h1>Zoom Box</h1>
+  <h1>Zoom Box Pro</h1>
   
-  <div class="instructions">
-    <strong>راهنمای استفاده:</strong>
-    <ol>
-      <li>روی آیکون افزونه کلیک کنید</li>
-      <li>دکمه "فعال کردن زوم" را بزنید</li>
-      <li>با موس یک کادر دور ناحیه مورد نظر بکشید</li>
-      <li>به صورت خودکار روی ناحیه زوم می‌شود</li>
-      <li>برای غیرفعال کردن، دکمه قرمز را بزنید</li>
-    </ol>
-    <p><strong>نکته:</strong> می‌توانید سطح زوم را با اسلایدر تنظیم کنید.</p>
+  <div class="section">
+    <h2>📖 راهنمای استفاده</h2>
+    <div class="instructions">
+      <ol>
+        <li>روی آیکون افزونه کلیک کنید تا این پنل باز شود</li>
+        <li>به صفحه‌ای که می‌خواهید زوم کنید بروید</li>
+        <li>دکمه <span class="highlight">"🔍 فعال کردن زوم"</span> را در صفحه بزنید</li>
+        <li>با موس یک کادر دور ناحیه مورد نظر بکشید</li>
+        <li>به صورت خودکار روی ناحیه زوم می‌شود</li>
+        <li>برای غیرفعال کردن، دکمه قرمز را بزنید یا <span class="highlight">Escape</span> را فشار دهید</li>
+      </ol>
+    </div>
   </div>
   
-  <div class="version">نسخه 1.0.0</div>
+  <div class="section">
+    <h2>⌨️ شورت‌کات‌های داخلی</h2>
+    <p class="settings-info" style="margin-bottom: 10px;">
+      💡 این شورت‌کات‌ها را می‌توانید از داخل پنل تنظیمات تغییر دهید:
+    </p>
+    <div class="shortcut-item">
+      <span class="shortcut-name">فعال/غیرفعال کردن زوم</span>
+      <span class="shortcut-key" id="toggle-shortcut-display">Ctrl+Shift+Z</span>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-name">بازنشانی زوم</span>
+      <span class="shortcut-key" id="reset-shortcut-display">Ctrl+Shift+R</span>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-name">خروج سریع</span>
+      <span class="shortcut-key">Escape</span>
+    </div>
+    <p class="settings-info" style="margin-top: 10px;">
+      🎯 برای تغییر شورت‌کات‌ها، بعد از فعال کردن زوم، به پنل کنترل در صفحه مراجعه کنید
+    </p>
+  </div>
+  
+  <div class="section">
+    <h2>⚙️ قابلیت‌های شخصی‌سازی</h2>
+    <ul class="feature-list">
+      <li>تنظیم سطح زوم (1.5x تا 5x)</li>
+      <li>تغییر رنگ کادر انتخاب</li>
+      <li>تنظیم شفافیت پس‌زمینه</li>
+      <li><span class="highlight">ذخیره شورت‌کات‌های سفارشی</span></li>
+      <li>ذخیره تنظیمات برای استفاده بعدی</li>
+      <li>بازنشانی به تنظیمات کارخانه</li>
+      <li>پشتیبانی از صفحات لمسی</li>
+      <li>تم رنگی سبز فسفری، آبی آسمانی و مشکی</li>
+    </ul>
+  </div>
+  
+  <div class="section">
+    <h2>🎯 نکات مهم</h2>
+    <p class="settings-info">
+      • برای کشیدن کادر باید حالت فعال باشد<br>
+      • کادر باید حداقل 50 پیکسل باشد<br>
+      • تنظیمات شما به صورت خودکار ذخیره می‌شود<br>
+      • از کلید Escape برای خروج سریع استفاده کنید<br>
+      • شورت‌کات‌ها را می‌توانید در پنل کنترل تغییر دهید
+    </p>
+  </div>
+  
+  <button class="btn" onclick="window.open('https://github.com', '_blank')">
+    📚 مستندات کامل
+  </button>
+  
+  <div class="version">نسخه 3.0.0 - با قابلیت شورت‌کات داخلی</div>
+  
+  <script>
+    // بارگذاری شورت‌کات‌های ذخیره شده
+    chrome.runtime.sendMessage({ action: 'getSettings' }, (response) => {
+      if (response && response.settings) {
+        const toggleShortcut = document.getElementById('toggle-shortcut-display');
+        const resetShortcut = document.getElementById('reset-shortcut-display');
+        
+        if (toggleShortcut && response.settings.toggleShortcut) {
+          toggleShortcut.textContent = response.settings.toggleShortcut;
+        }
+        
+        if (resetShortcut && response.settings.resetShortcut) {
+          resetShortcut.textContent = response.settings.resetShortcut;
+        }
+      }
+    });
+  </script>
 </body>
 </html>

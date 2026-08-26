@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Zoom Box - زوم با کشیدن کادر",
-  "version": "1.0.0",
-  "description": "یک افزونه کروم که به شما امکان می‌دهد با کشیدن یک کادر روی صفحه، روی آن ناحیه زوم کنید.",
+  "name": "Zoom Box Pro - Customizable",
+  "version": "3.0.0",
+  "description": "زوم پیشرفته با کشیدن کادر، قابلیت شخصی‌سازی کامل رنگ و شورت‌کات داخلی",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -13,7 +14,8 @@
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
-    }
+    },
+    "default_title": "تنظیمات Zoom Box"
   },
   "background": {
     "service_worker": "background.js"
