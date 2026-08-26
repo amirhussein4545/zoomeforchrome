@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تنظیمات زوم</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 320px;
+      padding: 15px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid rgba(255,255,255,0.3);
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.inactive {
+      background: #f87171;
+      animation: none;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .section {
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title svg {
+      width: 18px;
+      height: 18px;
+    }
+    
+    .zoom-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .zoom-level-display {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+    }
+    
+    .zoom-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    
+    .btn-primary {
+      background: #fff;
+      color: #667eea;
+    }
+    
+    .btn-primary:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background: rgba(255,255,255,0.3);
+      color: #fff;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.4);
+    }
+    
+    .btn-danger {
+      background: #ef4444;
+      color: #fff;
+    }
+    
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    
+    .btn-large {
+      padding: 12px 20px;
+      font-size: 16px;
+    }
+    
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    
+    .control-label {
+      font-size: 13px;
+      opacity: 0.95;
+      flex: 1;
+    }
+    
+    input[type="range"] {
+      flex: 2;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.3);
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    
+    input[type="number"] {
+      width: 70px;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      font-size: 14px;
+      text-align: center;
+    }
+    
+    input[type="color"] {
+      width: 50px;
+      height: 35px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+    }
+    
+    .value-display {
+      min-width: 45px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255,255,255,0.3);
+      transition: 0.3s;
+      border-radius: 26px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background-color: #4ade80;
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+    
+    .footer {
+      text-align: center;
+      padding-top: 10px;
+      border-top: 2px solid rgba(255,255,255,0.3);
+      margin-top: 10px;
+    }
+    
+    .footer-text {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 Zoom Box Pro</h1>
+    <p>پنل کنترل زوم حرفه‌ای</p>
+    <div class="status-indicator">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">افزونه فعال است</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="M21 21l-4.35-4.35"></path>
+        <path d="M11 8v6M8 11h6"></path>
+      </svg>
+      کنترل زوم
+    </div>
+    <div class="zoom-controls">
+      <div class="zoom-level-display" id="zoomLevelDisplay">100%</div>
+      <div class="zoom-buttons">
+        <button class="btn btn-secondary" id="zoomOutBtn">− کاهش</button>
+        <button class="btn btn-primary btn-large" id="resetZoomBtn">بازگشت به 100%</button>
+        <button class="btn btn-secondary" id="zoomInBtn">+ افزایش</button>
+      </div>
+      <div class="control-row" style="margin-top: 10px;">
+        <span class="control-label">تنظیم دستی:</span>
+        <input type="number" id="manualZoomInput" min="50" max="500" value="100">
+        <button class="btn btn-primary" id="applyZoomBtn">اعمال</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 8v4l3 3"></path>
+      </svg>
+      تنظیمات پس‌زمینه
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="control-row">
+        <span class="control-label">رنگ پس‌زمینه:</span>
+        <input type="color" id="bgColorPicker" value="#000000">
+      </div>
+      <div class="control-row">
+        <span class="control-label">شفافیت:</span>
+        <input type="range" id="opacitySlider" min="0" max="100" value="70">
+        <span class="value-display" id="opacityValue">70%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 20h9"></path>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+      </svg>
+      تنظیمات عمومی
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="toggle-container">
+        <span class="control-label">نمایش پنل در صفحه</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="panelToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-container">
+        <span class="control-label">فعال‌سازی زوم</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="enableZoom" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="background: rgba(239, 68, 68, 0.3);">
+    <button class="btn btn-danger" id="disableExtensionBtn" style="width: 100%;">
+      ❌ غیرفعال کردن موقت افزونه
+    </button>
+  </div>
+
+  <div class="footer">
+    <p class="footer-text">نسخه 7.0.0 | تمام تنظیمات بلافاصله اعمال می‌شوند</p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
