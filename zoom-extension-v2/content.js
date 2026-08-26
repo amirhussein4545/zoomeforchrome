@@ -132,6 +132,11 @@ class ZoomBox {
     // مخفی کردن اولیه
     this.selectionBox.style.display = 'none';
     this.overlay.style.display = 'none';
+    
+    // اطمینان از نمایش پنل تنظیمات
+    if (this.settingsContent) {
+      this.settingsContent.style.display = 'flex';
+    }
   }
 
   addEventListeners() {
@@ -229,13 +234,25 @@ class ZoomBox {
   togglePanel() {
     this.isPanelOpen = !this.isPanelOpen;
     if (this.isPanelOpen) {
-      this.settingsContent.style.display = 'flex';
-      this.togglePanelBtn.textContent = '▼';
-      this.controls.classList.remove('collapsed');
+      if (this.settingsContent) {
+        this.settingsContent.style.display = 'flex';
+      }
+      if (this.togglePanelBtn) {
+        this.togglePanelBtn.textContent = '▼';
+      }
+      if (this.controls) {
+        this.controls.classList.remove('collapsed');
+      }
     } else {
-      this.settingsContent.style.display = 'none';
-      this.togglePanelBtn.textContent = '▲';
-      this.controls.classList.add('collapsed');
+      if (this.settingsContent) {
+        this.settingsContent.style.display = 'none';
+      }
+      if (this.togglePanelBtn) {
+        this.togglePanelBtn.textContent = '▲';
+      }
+      if (this.controls) {
+        this.controls.classList.add('collapsed');
+      }
     }
   }
 
