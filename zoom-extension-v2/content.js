@@ -1,5 +1,5 @@
 // content.js - اسکریپت اصلی برای ایجاد قابلیت زوم با کشیدن کادر با قابلیت‌های شخصی‌سازی
-// نسخه 5.0.0 - با پنل تنظیمات جمع‌شونده و کنترل شفافیت پس‌زمینه هنگام زوم
+// نسخه 6.0.0 - بدون نیاز به رفرش، با امکان اسکرول و کنترل کامل از پنل
 
 class ZoomBox {
   constructor() {
@@ -8,19 +8,260 @@ class ZoomBox {
     this.startY = 0;
     this.box = null;
     this.isActive = false;
-    this.zoomLevel = 2; // سطح زوم پیش‌فرض
-    this.isPanelOpen = true; // وضعیت باز بودن پنل
+    this.zoomLevel = 2;
+    this.isPanelOpen = true;
+    this.currentZoomLeft = 0;
+    this.currentZoomTop = 0;
+    this.currentZoomWidth = 0;
+    this.currentZoomHeight = 0;
     this.settings = {
       zoomLevel: 2,
-      boxColor: '#39FF14', // سبز فسفری
-      overlayColor: 'rgba(0, 0, 0, 0.7)', // پس‌زمینه تیره‌تر هنگام زوم
+      boxColor: '#39FF14',
+      overlayColor: 'rgba(0, 0, 0, 0.7)',
       shortcutEnabled: true,
       animationDuration: 0.3,
       toggleShortcut: 'Ctrl+Shift+Z',
       resetShortcut: 'Ctrl+Shift+R'
     };
     
+    // تزریق استایل‌ها
+    this.injectStyles();
     this.init();
+  }
+
+  injectStyles() {
+    if (document.getElementById('zoom-extension-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'zoom-extension-styles';
+    style.textContent = `
+      #zoom-box-container {
+        all: initial;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      }
+      
+      .zoom-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        pointer-events: none;
+        z-index: 2147483646;
+        display: none;
+      }
+      
+      .zoom-selection-box {
+        position: fixed;
+        border: 3px solid #39FF14;
+        background-color: rgba(57, 255, 20, 0.2);
+        box-shadow: 0 0 20px rgba(57, 255, 20, 0.8);
+        z-index: 2147483647;
+        pointer-events: none;
+        display: none;
+        transition: all 0.1s ease;
+      }
+      
+      .zoom-controls {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #39FF14 100%);
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(57, 255, 20, 0.4);
+        z-index: 2147483647;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 220px;
+        backdrop-filter: blur(10px);
+        border: 2px solid #39FF14;
+        max-height: 90vh;
+        overflow-y: auto;
+        transition: all 0.3s ease;
+      }
+      
+      .zoom-controls.collapsed {
+        min-width: auto;
+        padding: 10px;
+      }
+      
+      .zoom-controls-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 5px;
+      }
+      
+      .zoom-btn-small {
+        padding: 5px 10px;
+        border: 2px solid #87CEEB;
+        border-radius: 6px;
+        background: #000000;
+        color: #39FF14;
+        font-weight: bold;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 30px;
+      }
+      
+      .zoom-btn-small:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(135, 206, 235, 0.4);
+        background: #87CEEB;
+        color: #000000;
+        border-color: #39FF14;
+      }
+      
+      .zoom-panel-title {
+        color: #87CEEB;
+        font-weight: bold;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+      
+      .zoom-settings-content {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: all 0.3s ease;
+      }
+      
+      .zoom-btn {
+        padding: 10px 15px;
+        border: 2px solid #87CEEB;
+        border-radius: 8px;
+        background: #000000;
+        color: #39FF14;
+        font-weight: bold;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(57, 255, 20, 0.2);
+      }
+      
+      .zoom-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(135, 206, 235, 0.4);
+        background: #87CEEB;
+        color: #000000;
+        border-color: #39FF14;
+      }
+      
+      .zoom-btn.active {
+        background: #39FF14;
+        color: #000000;
+        border-color: #87CEEB;
+      }
+      
+      #zoom-reset-btn {
+        background: #000000;
+        color: #f44336;
+        border-color: #f44336;
+      }
+      
+      #zoom-reset-btn:hover {
+        background: #f44336;
+        color: #000000;
+      }
+      
+      .zoom-settings {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #87CEEB;
+        font-size: 12px;
+        margin-top: 5px;
+        flex-wrap: wrap;
+      }
+      
+      .zoom-settings label {
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      
+      #zoom-level, #overlay-opacity {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(135, 206, 235, 0.3);
+        outline: none;
+        -webkit-appearance: none;
+        min-width: 80px;
+      }
+      
+      #zoom-level::-webkit-slider-thumb, #overlay-opacity::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #39FF14;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        border: 2px solid #87CEEB;
+      }
+      
+      #zoom-level-display {
+        min-width: 40px;
+        text-align: center;
+        font-weight: bold;
+        background: rgba(57, 255, 20, 0.2);
+        padding: 3px 8px;
+        border-radius: 4px;
+        color: #39FF14;
+        border: 1px solid #87CEEB;
+      }
+      
+      #box-color {
+        width: 40px;
+        height: 30px;
+        border: 2px solid #87CEEB;
+        border-radius: 4px;
+        cursor: pointer;
+        background: #000000;
+      }
+      
+      #toggle-shortcut, #reset-shortcut {
+        flex: 1;
+        padding: 5px 8px;
+        border: 1px solid #87CEEB;
+        border-radius: 4px;
+        background: #000000;
+        color: #39FF14;
+        font-size: 11px;
+        min-width: 100px;
+      }
+      
+      .zoom-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #39FF14 0%, #87CEEB 100%);
+        color: #000000;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(57, 255, 20, 0.4);
+        z-index: 2147483647;
+        font-weight: bold;
+        border: 2px solid #000000;
+        animation: slideIn 0.3s ease;
+      }
+      
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   init() {
@@ -137,6 +378,9 @@ class ZoomBox {
     if (this.settingsContent) {
       this.settingsContent.style.display = 'flex';
     }
+    
+    // گوش دادن به اسکرول برای آپدیت موقعیت زوم
+    window.addEventListener('scroll', () => this.updateZoomOnScroll(), true);
   }
 
   addEventListeners() {
@@ -494,6 +738,12 @@ class ZoomBox {
   }
 
   applyZoom(left, top, width, height) {
+    // ذخیره اطلاعات ناحیه زوم شده
+    this.currentZoomLeft = left;
+    this.currentZoomTop = top;
+    this.currentZoomWidth = width;
+    this.currentZoomHeight = height;
+    
     // محاسبه مرکز ناحیه انتخاب شده
     const centerX = left + width / 2;
     const centerY = top + height / 2;
@@ -502,6 +752,10 @@ class ZoomBox {
     document.body.style.transformOrigin = `${centerX}px ${centerY}px`;
     document.body.style.transform = `scale(${this.zoomLevel})`;
     document.body.style.transition = `transform ${this.settings.animationDuration}s ease`;
+    
+    // اجازه اسکرول دادن بعد از زوم
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
 
     // اسکرول به ناحیه زوم شده
     const scrollX = centerX - window.innerWidth / 2;
@@ -523,10 +777,30 @@ class ZoomBox {
 
     console.log(`Zoom applied: ${this.zoomLevel}x at (${left}, ${top})`);
   }
+  
+  updateZoomOnScroll() {
+    // وقتی کاربر اسکرول می‌کند، موقعیت ترنسفورم را آپدیت کن
+    if (this.isActive && this.currentZoomWidth > 0) {
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
+      
+      const centerX = this.currentZoomLeft + this.currentZoomWidth / 2;
+      const centerY = this.currentZoomTop + this.currentZoomHeight / 2;
+      
+      // آپدیت transform-origin بر اساس موقعیت اسکرول
+      document.body.style.transformOrigin = `${centerX}px ${centerY}px`;
+    }
+  }
 
   resetZoom() {
     document.body.style.transform = 'scale(1)';
     document.body.style.transformOrigin = 'center center';
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    this.currentZoomLeft = 0;
+    this.currentZoomTop = 0;
+    this.currentZoomWidth = 0;
+    this.currentZoomHeight = 0;
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
     console.log('Zoom reset');
   }
