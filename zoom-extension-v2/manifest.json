@@ -1,21 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Zoom Box Pro - Inline Settings",
-  "version": "5.0.0",
-  "description": "زوم پیشرفته با کشیدن کادر، تنظیمات روی صفحه و کنترل شفافیت پس‌زمینه هنگام زوم",
+  "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
+  "version": "6.0.0",
+  "description": "افزونه زوم حرفه‌ای با قابلیت کشیدن کادر، تنظیمات کامل و بدون نیاز به رفرش صفحه",
   "permissions": [
-    "activeTab",
-    "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
-  "action": {
-    "default_title": "Zoom Box Pro - کلیک کنید تا فعال شود",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
-  },
   "background": {
     "service_worker": "background.js"
   },
@@ -23,7 +14,6 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "css": ["styles.css"],
       "run_at": "document_end"
     }
   ],
@@ -31,11 +21,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["styles.css"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }
