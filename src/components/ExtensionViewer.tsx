@@ -15,19 +15,23 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   const files = {
     content: {
       name: 'content.js',
-      desc: 'اسکریپت تزریقی صفحه: Shadow DOM ایزوله، رسم کادر، انیمیشن زوم، Lens و Pan',
+      desc: 'اسکریپت تزریقی صفحه: Shadow DOM ایزوله سازگار با فایرفاکس، رسم کادر با Pointer Events، انیمیشن زوم و Pan',
       code: `/**
  * Zoom Box Pro - Content Script (v8.6.2)
  * سیستم پیشرفته زوم تمام‌صفحه با رسم کادر و ایزولاسیون کامل با Shadow DOM
- * سازگاری ۱۰۰٪ تضمین‌شده با فایرفاکس (Firefox)، گوگل کروم، بریو و اج
+ * سازگاری ۱۰۰٪ تضمین‌شده با ویژگی‌ها و رفتارهای اختصاصی موزیلا فایرفاکس (Firefox)
+ * و پشتیبانی کامل از رویدادها در مرز Shadow DOM (Shadow Boundary Event Propagation)
  */
 (function () {
   'use strict';
+
   if (window.__ZOOM_BOX_PRO_INSTANCE__) {
     return;
   }
 
-  const browserAPI = (typeof browser !== 'undefined' && browser.runtime) ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+  const browserAPI = (typeof browser !== 'undefined' && browser.runtime)
+    ? browser
+    : (typeof chrome !== 'undefined' ? chrome : null);
 
   class ZoomBoxProController {
     constructor() {
@@ -41,6 +45,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       this.isZoomed = false;
       this.lastOriginX = window.innerWidth / 2;
       this.lastOriginY = window.innerHeight / 2;
+      this.activePointerId = null;
 
       this.settings = {
         zoomLevel: 200,
@@ -122,6 +127,8 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           border: none !important;
           padding: 0 !important;
           margin: 0 !important;
+          contain: layout style !important;
+          display: block !important;
         }
         #zbp-root-host.zbp-host-active {
           width: 100vw !important;
@@ -137,19 +144,29 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
 
       this.rootContainer = document.createElement('div');
       this.rootContainer.id = 'zbp-root-host';
-      this.shadowRoot = this.rootContainer.attachShadow({ mode: 'open' });
+
+      // Firefox and modern browser compatible attachShadow with mode: 'open'
+      try {
+        this.shadowRoot = this.rootContainer.attachShadow({ mode: 'open' });
+      } catch (err) {
+        console.warn('ZBP attachShadow retry:', err);
+        this.shadowRoot = this.rootContainer.shadowRoot || this.rootContainer;
+      }
 
       const shadowStyle = document.createElement('style');
       shadowStyle.textContent = \`
         :host {
-          all: initial;
+          all: initial !important;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Vazirmatn, Tahoma, sans-serif !important;
           direction: rtl !important;
+          display: block !important;
         }
         * {
           box-sizing: border-box !important;
           margin: 0 !important;
           padding: 0 !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
         }
         #zbp-overlay {
           position: fixed !important;
@@ -221,6 +238,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           pointer-events: none !important;
           border-radius: 3px !important;
           animation: zbp-box-pulse 2s ease-in-out infinite !important;
+          touch-action: none !important;
         }
         .zbp-corner {
           position: absolute !important;
@@ -311,6 +329,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           z-index: 2147483643 !important;
           padding: 14px !important;
           user-select: none !important;
+          -webkit-user-select: none !important;
           display: none;
           pointer-events: auto !important;
           direction: rtl !important;
@@ -590,7 +609,30 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       if (lensLabel) lensLabel.textContent = \`LENS \${this.settings.zoomLevel}%\`;
     }
 
+    /**
+     * Helper to safely extract event target across Firefox Shadow Boundary
+     */
+    getComposedTarget(event) {
+      if (event.composedPath && typeof event.composedPath === 'function') {
+        const path = event.composedPath();
+        if (path && path.length > 0) {
+          return path[0];
+        }
+      }
+      return event.target;
+    }
+
+    isEventInside(event, element) {
+      if (!element) return false;
+      if (event.composedPath && typeof event.composedPath === 'function') {
+        const path = event.composedPath();
+        return path.includes(element);
+      }
+      return element.contains(event.target);
+    }
+
     bindListeners() {
+      // پیام‌های دریافتی از Popup یا Background Script
       if (browserAPI && browserAPI.runtime && browserAPI.runtime.onMessage) {
         browserAPI.runtime.onMessage.addListener((req, sender, sendResponse) => {
           if (!req) return;
@@ -621,83 +663,94 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         });
       }
 
-      if (this.shadowRoot) {
-        const closeBtn = this.shadowRoot.querySelector('#zbp-close-panel');
-        if (closeBtn) {
-          closeBtn.addEventListener('click', () => {
-            if (this.floatingPanel) this.floatingPanel.style.display = 'none';
-          });
-        }
-
-        const drawBtn = this.shadowRoot.querySelector('#zbp-toggle-draw');
-        if (drawBtn) {
-          drawBtn.addEventListener('click', () => {
-            if (this.isDrawingMode) {
-              this.cancelDrawing();
-            } else {
-              this.startDrawingMode();
-            }
-          });
-        }
-
-        const slider = this.shadowRoot.querySelector('#zbp-zoom-slider');
-        if (slider) {
-          slider.addEventListener('input', async (e) => {
-            this.settings.zoomLevel = parseInt(e.target.value, 10);
-            const levelVal = this.shadowRoot.querySelector('#zbp-level-val');
-            if (levelVal) levelVal.textContent = \`\${this.settings.zoomLevel}%\`;
-            await this.saveSettings();
-            if (this.isZoomed) {
-              this.updateZoomScale();
-            }
-          });
-        }
-
-        const decBtn = this.shadowRoot.querySelector('#zbp-bar-dec');
-        if (decBtn) {
-          decBtn.addEventListener('click', async () => {
-            this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
-            this.applyPanelValues();
-            this.updateZoomScale();
-            await this.saveSettings();
-          });
-        }
-
-        const incBtn = this.shadowRoot.querySelector('#zbp-bar-inc');
-        if (incBtn) {
-          incBtn.addEventListener('click', async () => {
-            this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
-            this.applyPanelValues();
-            this.updateZoomScale();
-            await this.saveSettings();
-          });
-        }
-
-        const resetBtn = this.shadowRoot.querySelector('#zbp-bar-reset');
-        if (resetBtn) {
-          resetBtn.addEventListener('click', () => {
-            this.zoomOutSmoothly();
-          });
-        }
+      // رویدادهای پنل شناور درون Shadow DOM
+      const closeBtn = this.shadowRoot.querySelector('#zbp-close-panel');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.togglePanel();
+        });
       }
 
-      // Keyboard Controls
-      window.addEventListener('keydown', (e) => {
-        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
-        if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      const drawBtn = this.shadowRoot.querySelector('#zbp-toggle-draw');
+      if (drawBtn) {
+        drawBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.isDrawingMode) {
+            this.cancelDrawing();
+          } else {
+            this.startDrawingMode();
+          }
+        });
+      }
 
-        const isCtrl = e.ctrlKey || e.metaKey;
+      const zoomSlider = this.shadowRoot.querySelector('#zbp-zoom-slider');
+      if (zoomSlider) {
+        zoomSlider.addEventListener('input', (e) => {
+          e.stopPropagation();
+          const val = parseInt(e.target.value, 10);
+          this.settings.zoomLevel = val;
+          const levelVal = this.shadowRoot.querySelector('#zbp-level-val');
+          if (levelVal) levelVal.textContent = \`\${val}%\`;
+          const lensLabel = this.shadowRoot.querySelector('#zbp-lens-label');
+          if (lensLabel) lensLabel.textContent = \`LENS \${val}%\`;
+          this.saveSettings();
+          if (this.isZoomed) {
+            this.updateZoomScale();
+          }
+        });
+      }
+
+      // دکمه‌های نوار وضعیت پایین
+      const barDec = this.shadowRoot.querySelector('#zbp-bar-dec');
+      if (barDec) {
+        barDec.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
+          this.applyPanelValues();
+          this.updateZoomScale();
+          await this.saveSettings();
+        });
+      }
+
+      const barInc = this.shadowRoot.querySelector('#zbp-bar-inc');
+      if (barInc) {
+        barInc.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
+          this.applyPanelValues();
+          this.updateZoomScale();
+          await this.saveSettings();
+        });
+      }
+
+      const barReset = this.shadowRoot.querySelector('#zbp-bar-reset');
+      if (barReset) {
+        barReset.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.zoomOutSmoothly();
+        });
+      }
+
+      // میانبرهای کیبورد سراسری
+      window.addEventListener('keydown', (e) => {
+        const isCtrlOrMeta = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
         const isAlt = e.altKey;
-        const key = e.key ? e.key.toUpperCase() : '';
-        const code = e.code ? e.code.replace('Key', '').toUpperCase() : '';
 
-        const matchCtrl = this.settings.shortcutCtrl ? isCtrl : !isCtrl;
-        const matchShift = this.settings.shortcutShift ? isShift : !isShift;
-        const matchAlt = this.settings.shortcutAlt ? isAlt : !isAlt;
-        const matchKey = (key === this.settings.shortcutKey.toUpperCase()) || (code === this.settings.shortcutKey.toUpperCase());
+        const reqCtrl = this.settings.shortcutCtrl !== false;
+        const reqShift = this.settings.shortcutShift !== false;
+        const reqAlt = this.settings.shortcutAlt === true;
+        const reqKey = (this.settings.shortcutKey || 'Z').toUpperCase();
 
-        if (matchCtrl && matchShift && matchAlt && matchKey) {
+        const currentKey = (e.key || '').toUpperCase();
+        const matchesShortcut = 
+          (isCtrlOrMeta === reqCtrl) &&
+          (isShift === reqShift) &&
+          (isAlt === reqAlt) &&
+          (currentKey === reqKey || e.code === \`Key\${reqKey}\`);
+
+        if (matchesShortcut) {
           e.preventDefault();
           e.stopPropagation();
           if (this.isDrawingMode) {
@@ -705,77 +758,84 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           } else {
             this.startDrawingMode();
           }
-        } else if (e.key === 'Escape') {
+          return;
+        }
+
+        if (e.key === 'Escape') {
           if (this.isDrawingMode) {
             this.cancelDrawing();
           } else if (this.isZoomed) {
             this.zoomOutSmoothly();
           }
-        } else if (this.isZoomed && !this.isDrawingMode) {
-          if (e.key === '+' || e.key === '=') {
-            e.preventDefault();
-            this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
-            this.applyPanelValues();
-            this.updateZoomScale();
-          } else if (e.key === '-' || e.key === '_') {
-            e.preventDefault();
-            this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
-            this.applyPanelValues();
-            this.updateZoomScale();
-          } else if (e.key === '0') {
-            e.preventDefault();
-            this.zoomOutSmoothly();
+          return;
+        }
+
+        // وقتی صفحه زوم است، کلیدهای + و - کنترل زوم را تغییر می‌دهند
+        if (this.isZoomed && !this.isDrawingMode) {
+          const target = this.getComposedTarget(e);
+          const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+          if (!isInput) {
+            if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
+              e.preventDefault();
+              this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
+              this.applyPanelValues();
+              this.updateZoomScale();
+              this.saveSettings();
+            } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+              e.preventDefault();
+              this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
+              this.applyPanelValues();
+              this.updateZoomScale();
+              this.saveSettings();
+            } else if (e.key === '0' || e.code === 'Numpad0') {
+              e.preventDefault();
+              this.zoomOutSmoothly();
+            }
           }
         }
       }, true);
 
-      // Lens Mode Cursor Follower
-      window.addEventListener('mousemove', (e) => {
-        if (this.settings.lensMode && !this.isDrawingMode && !this.isZoomed && this.lensHUD) {
-          this.lensHUD.style.display = 'block';
-          this.lensHUD.style.left = \`\${e.clientX}px\`;
-          this.lensHUD.style.top = \`\${e.clientY}px\`;
-        } else if (this.lensHUD) {
-          this.lensHUD.style.display = 'none';
-        }
-      }, { passive: true });
-
-      // Drawing Overlay Start
-      const startDraw = (clientX, clientY) => {
+      // رویدادهای رسم با Pointer Events (سازگار ۱۰۰٪ با فایرفاکس، موس و لمسی)
+      const onPointerDown = (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
         this.isDragging = true;
-        this.startX = clientX;
-        this.startY = clientY;
-        if (this.selectionBox) {
-          this.selectionBox.classList.remove('zbp-focus-lock');
-          this.selectionBox.style.display = 'block';
-          this.selectionBox.style.left = \`\${this.startX}px\`;
-          this.selectionBox.style.top = \`\${this.startY}px\`;
-          this.selectionBox.style.width = '0px';
-          this.selectionBox.style.height = '0px';
+        this.activePointerId = e.pointerId;
+        this.startX = e.clientX;
+        this.startY = e.clientY;
+
+        if (this.overlay && this.overlay.setPointerCapture && e.pointerId) {
+          try {
+            this.overlay.setPointerCapture(e.pointerId);
+          } catch (err) {}
         }
+
+        this.selectionBox.classList.remove('zbp-focus-lock');
+        this.selectionBox.style.display = 'block';
+        this.selectionBox.style.left = \`\${this.startX}px\`;
+        this.selectionBox.style.top = \`\${this.startY}px\`;
+        this.selectionBox.style.width = '0px';
+        this.selectionBox.style.height = '0px';
+
+        if (this.lensHUD) this.lensHUD.style.display = 'none';
+
+        e.preventDefault();
+        e.stopPropagation();
       };
 
-      if (this.overlay) {
-        this.overlay.addEventListener('mousedown', (e) => {
-          if (e.button !== 0) return;
-          startDraw(e.clientX, e.clientY);
-          e.preventDefault();
-          e.stopPropagation();
-        });
-
-        this.overlay.addEventListener('touchstart', (e) => {
-          if (e.touches && e.touches[0]) {
-            startDraw(e.touches[0].clientX, e.touches[0].clientY);
-            e.preventDefault();
+      const onPointerMove = (e) => {
+        // نشانگر ذره‌بین (Lens HUD)
+        if (this.isDrawingMode && this.settings.lensMode && !this.isDragging) {
+          if (this.lensHUD) {
+            this.lensHUD.style.display = 'block';
+            this.lensHUD.style.left = \`\${e.clientX}px\`;
+            this.lensHUD.style.top = \`\${e.clientY}px\`;
           }
-        }, { passive: false });
-      }
+        }
 
-      // Drawing Overlay Drag Move
-      const moveDraw = (clientX, clientY) => {
-        if (!this.isDragging || !this.isDrawingMode || !this.selectionBox) return;
-        const currentX = Math.max(0, Math.min(window.innerWidth, clientX));
-        const currentY = Math.max(0, Math.min(window.innerHeight, clientY));
+        if (!this.isDragging || !this.isDrawingMode) return;
+
+        const currentX = Math.max(0, Math.min(window.innerWidth, e.clientX));
+        const currentY = Math.max(0, Math.min(window.innerHeight, e.clientY));
         const left = Math.min(currentX, this.startX);
         const top = Math.min(currentY, this.startY);
         const width = Math.abs(currentX - this.startX);
@@ -786,32 +846,28 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         this.selectionBox.style.width = \`\${width}px\`;
         this.selectionBox.style.height = \`\${height}px\`;
 
-        const dimText = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-dim-text') : null;
+        const dimText = this.shadowRoot.querySelector('#zbp-dim-text');
         if (dimText) {
           dimText.textContent = \`\${Math.round(width)} × \${Math.round(height)}px\`;
         }
+
+        e.preventDefault();
       };
 
-      window.addEventListener('mousemove', (e) => {
-        if (this.isDragging && this.isDrawingMode) {
-          moveDraw(e.clientX, e.clientY);
-          e.preventDefault();
-        }
-      }, { passive: false });
-
-      window.addEventListener('touchmove', (e) => {
-        if (this.isDragging && this.isDrawingMode && e.touches && e.touches[0]) {
-          moveDraw(e.touches[0].clientX, e.touches[0].clientY);
-          e.preventDefault();
-        }
-      }, { passive: false });
-
-      // Drawing Overlay End / Apply Zoom
-      const endDraw = () => {
-        if (!this.isDragging || !this.isDrawingMode || !this.selectionBox) return;
+      const onPointerUp = (e) => {
+        if (!this.isDragging || !this.isDrawingMode) return;
         this.isDragging = false;
+
+        if (this.overlay && this.overlay.releasePointerCapture && this.activePointerId) {
+          try {
+            this.overlay.releasePointerCapture(this.activePointerId);
+          } catch (err) {}
+          this.activePointerId = null;
+        }
+
         const rect = this.selectionBox.getBoundingClientRect();
 
+        // انیمیشن نرم فوکوس
         this.selectionBox.classList.add('zbp-focus-lock');
         setTimeout(() => {
           if (this.selectionBox) {
@@ -825,34 +881,66 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         if (rect.width >= 15 && rect.height >= 15) {
           this.applyFullPageZoom(rect);
         } else {
-          // Single-click zoom: centered 160x120 around click point
           this.applyFullPageZoom({
-            left: Math.max(0, this.startX - 80),
-            top: Math.max(0, this.startY - 60),
-            width: 160,
+            left: this.startX - 60,
+            top: this.startY - 60,
+            width: 120,
             height: 120
           });
         }
       };
 
-      window.addEventListener('mouseup', (e) => {
-        if (this.isDragging && this.isDrawingMode) {
-          endDraw();
-        }
-      });
+      // Pointer event listeners on overlay
+      if (this.overlay) {
+        this.overlay.addEventListener('pointerdown', onPointerDown);
+        this.overlay.addEventListener('pointermove', onPointerMove);
+        this.overlay.addEventListener('pointerup', onPointerUp);
+        this.overlay.addEventListener('pointercancel', onPointerUp);
 
-      window.addEventListener('touchend', (e) => {
-        if (this.isDragging && this.isDrawingMode) {
-          endDraw();
-        }
-      });
+        // Fallback for touch devices
+        this.overlay.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches[0]) {
+            const touch = e.touches[0];
+            onPointerDown({
+              clientX: touch.clientX,
+              clientY: touch.clientY,
+              pointerId: 1,
+              pointerType: 'touch',
+              preventDefault: () => e.preventDefault(),
+              stopPropagation: () => e.stopPropagation()
+            });
+          }
+        }, { passive: false });
 
-      // Pan support when zoomed (Middle click or Space+Drag)
+        this.overlay.addEventListener('touchmove', (e) => {
+          if (e.touches && e.touches[0]) {
+            const touch = e.touches[0];
+            onPointerMove({
+              clientX: touch.clientX,
+              clientY: touch.clientY,
+              preventDefault: () => e.preventDefault()
+            });
+          }
+        }, { passive: false });
+
+        this.overlay.addEventListener('touchend', (e) => {
+          onPointerUp({});
+        });
+      }
+
+      // جابجایی صفحه در حالت زوم با کلیک وسط ماوس یا Space+Drag (Pan)
       window.addEventListener('mousedown', (e) => {
-        if (this.isZoomed && (e.button === 1 || (e.button === 0 && e.spaceKey))) {
+        if (!this.isZoomed || this.isDrawingMode) return;
+        // اگر کلیک داخل کنترل‌های خود افزونه باشد، کاری نکن
+        if (this.isEventInside(e, this.floatingPanel) || this.isEventInside(e, this.statusBar)) {
+          return;
+        }
+
+        if (e.button === 1 || (e.button === 0 && e.spaceKey)) {
           this.isPanning = true;
           this.panStartX = e.clientX;
           this.panStartY = e.clientY;
+          document.body.style.cursor = 'grab';
           e.preventDefault();
         }
       });
@@ -863,10 +951,11 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           const dy = e.clientY - this.panStartY;
           this.panStartX = e.clientX;
           this.panStartY = e.clientY;
-          this.lastOriginX -= dx;
-          this.lastOriginY -= dy;
+
+          this.lastOriginX -= (dx / (this.settings.zoomLevel / 100));
+          this.lastOriginY -= (dy / (this.settings.zoomLevel / 100));
+
           const target = document.body || document.documentElement;
-          target.style.transition = 'none';
           target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
         }
       });
@@ -874,6 +963,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       window.addEventListener('mouseup', (e) => {
         if (this.isPanning) {
           this.isPanning = false;
+          document.body.style.cursor = '';
         }
       });
     }
@@ -884,11 +974,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         this.floatingPanel.style.display = 'none';
       } else {
         this.floatingPanel.style.display = 'block';
+        if (this.rootContainer) {
+          this.rootContainer.classList.add('zbp-host-active');
+        }
       }
     }
 
     startDrawingMode() {
-      // If already zoomed, smoothly reset first for crisp selection
+      // اگر از قبل زوم بود، ابتدا صفحه را با ریست نرم به ۱۰۰٪ برمی‌گردانیم تا مختصات دقیق باشد
       if (this.isZoomed) {
         this.zoomOutSmoothly();
       }
@@ -897,8 +990,12 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       if (this.rootContainer) {
         this.rootContainer.classList.add('zbp-host-active');
       }
-      if (this.overlay) this.overlay.style.display = 'block';
-      if (this.lensHUD) this.lensHUD.style.display = 'none';
+      if (this.overlay) {
+        this.overlay.style.display = 'block';
+      }
+      if (this.settings.lensMode && this.lensHUD) {
+        this.lensHUD.style.display = 'block';
+      }
 
       const drawBtn = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-toggle-draw') : null;
       if (drawBtn) {
@@ -910,11 +1007,16 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     cancelDrawing() {
       this.isDrawingMode = false;
       this.isDragging = false;
-      if (this.rootContainer && !this.isZoomed) {
-        this.rootContainer.classList.remove('zbp-host-active');
-      }
       if (this.overlay) this.overlay.style.display = 'none';
       if (this.selectionBox) this.selectionBox.style.display = 'none';
+      if (this.lensHUD) this.lensHUD.style.display = 'none';
+
+      if (!this.isZoomed && (!this.floatingPanel || this.floatingPanel.style.display !== 'block')) {
+        if (this.rootContainer) {
+          this.rootContainer.classList.remove('zbp-host-active');
+        }
+      }
+
       const drawBtn = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-toggle-draw') : null;
       if (drawBtn) {
         drawBtn.textContent = '✏️ شروع انتخاب محدوده زوم';
@@ -924,9 +1026,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
 
     applyFullPageZoom(rect) {
       this.isZoomed = true;
+      if (this.rootContainer) {
+        this.rootContainer.classList.add('zbp-host-active');
+      }
+
       const scale = this.settings.zoomLevel / 100;
       const scrollX = window.scrollX || window.pageXOffset || 0;
       const scrollY = window.scrollY || window.pageYOffset || 0;
+
       this.lastOriginX = rect.left + (rect.width / 2) + scrollX;
       this.lastOriginY = rect.top + (rect.height / 2) + scrollY;
 
@@ -935,12 +1042,13 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
       target.style.transform = \`scale(\${scale})\`;
 
+      this.updateStyles();
+
       if (this.statusBar) {
         this.statusBar.style.display = 'flex';
-        const valEl = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-bar-val') : null;
+        const valEl = this.shadowRoot.querySelector('#zbp-bar-val');
         if (valEl) valEl.textContent = \`\${this.settings.zoomLevel}%\`;
       }
-      this.updateStyles();
     }
 
     updateZoomScale() {
@@ -948,29 +1056,41 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       const scale = this.settings.zoomLevel / 100;
       const target = document.body || document.documentElement;
       target.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
+      target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
       target.style.transform = \`scale(\${scale})\`;
+
+      this.updateStyles();
+
       if (this.statusBar) {
-        const valEl = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-bar-val') : null;
+        const valEl = this.shadowRoot.querySelector('#zbp-bar-val');
         if (valEl) valEl.textContent = \`\${this.settings.zoomLevel}%\`;
       }
-      this.updateStyles();
     }
 
     zoomOutSmoothly() {
       this.isZoomed = false;
       this.cancelDrawing();
+
       const target = document.body || document.documentElement;
       target.style.transition = 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1)';
       target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
       target.style.transform = 'scale(1)';
+
+      this.updateStyles();
+
       if (this.statusBar) {
         this.statusBar.style.display = 'none';
       }
-      this.updateStyles();
+
       setTimeout(() => {
         if (!this.isZoomed) {
           target.style.transform = 'none';
           target.style.transformOrigin = 'initial';
+          if (!this.floatingPanel || this.floatingPanel.style.display !== 'block') {
+            if (this.rootContainer) {
+              this.rootContainer.classList.remove('zbp-host-active');
+            }
+          }
         }
       }, 700);
     }
