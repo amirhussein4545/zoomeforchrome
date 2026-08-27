@@ -10,13 +10,15 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
+    "@types/webextension-polyfill": "^0.12.5",
     "clsx": "^2.1.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
     "motion": "^12.4.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^3.0.1"
+    "tailwind-merge": "^3.0.1",
+    "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.6",
