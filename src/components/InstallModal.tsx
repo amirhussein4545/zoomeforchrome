@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Chrome, Download, ShieldCheck, FolderOpen, CheckCircle, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Chrome, Download, ShieldCheck, FolderOpen, CheckCircle, Flame } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -8,23 +8,25 @@ interface Props {
 }
 
 export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
+  const [activeBrowser, setActiveBrowser] = useState<'chrome' | 'firefox'>('chrome');
+
   if (!isOpen) return null;
 
-  const steps = [
+  const chromeSteps = [
     {
       step: '01',
       titleFa: 'دانلود و استخراج فایل زیپ',
       titleEn: 'Download & Unzip Repository',
-      descFa: 'از منوی گیت‌هاب روی دکمه Code کلیک کرده و Download ZIP را بزنید. سپس فایل زیپ را از حالت فشرده خارج (Extract) کنید.',
-      descEn: 'Click "Code" on GitHub and select "Download ZIP". Unzip the repository folder on your computer.',
+      descFa: 'از گیت‌هاب فایل زیپ را دانلود و از حالت فشرده خارج (Extract) کنید.',
+      descEn: 'Download ZIP from GitHub and unzip the repository folder on your computer.',
       icon: Download,
     },
     {
       step: '02',
       titleFa: 'ورود به صفحه مدیریت افزونه‌های کروم',
       titleEn: 'Open Chrome Extensions',
-      descFa: 'مرورگر گوگل کروم را باز کرده و در نوار آدرس عبارت زیر را وارد کنید:',
-      descEn: 'Open Google Chrome and navigate to the following URL in your address bar:',
+      descFa: 'مرورگر گوگل کروم، بریو یا اج را باز کرده و آدرس زیر را وارد کنید:',
+      descEn: 'Open Google Chrome / Brave / Edge and navigate to:',
       url: 'chrome://extensions',
       icon: Chrome,
     },
@@ -33,18 +35,56 @@ export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
       titleFa: 'فعال‌سازی حالت توسعه‌دهنده (Developer Mode)',
       titleEn: 'Enable Developer Mode',
       descFa: 'در بالای سمت راست صفحه مدیریت افزونه‌ها، دکمه‌ی Developer mode را روشن کنید.',
-      descEn: 'Toggle the "Developer mode" switch located in the top-right corner of the extensions page.',
+      descEn: 'Toggle the "Developer mode" switch located in the top-right corner.',
       icon: ShieldCheck,
     },
     {
       step: '04',
       titleFa: 'بارگذاری پوشه افزونه (Load Unpacked)',
       titleEn: 'Load Unpacked Directory',
-      descFa: 'روی دکمه‌ی Load unpacked کلیک کرده و پوشه zoom-extension-v2 را از فایل‌های استخراج شده انتخاب کنید.',
-      descEn: 'Click "Load unpacked" and select the zoom-extension-v2 folder from the extracted repository.',
+      descFa: 'روی دکمه‌ی Load unpacked کلیک کرده و پوشه zoom-extension-v2 را انتخاب کنید.',
+      descEn: 'Click "Load unpacked" and select the zoom-extension-v2 folder.',
       icon: FolderOpen,
     },
   ];
+
+  const firefoxSteps = [
+    {
+      step: '01',
+      titleFa: 'دانلود و استخراج فایل زیپ',
+      titleEn: 'Download & Unzip Repository',
+      descFa: 'فایل زیپ پروژه را دانلود و در سیستم خود Extract کنید.',
+      descEn: 'Download ZIP and extract it on your local machine.',
+      icon: Download,
+    },
+    {
+      step: '02',
+      titleFa: 'ورود به صفحه Debugging فایرفاکس',
+      titleEn: 'Open Firefox Debugging',
+      descFa: 'مرورگر فایرفاکس را باز کرده و آدرس زیر را در نوار جستجو وارد نمایید:',
+      descEn: 'Open Firefox and navigate to the debugging page:',
+      url: 'about:debugging#/runtime/this-firefox',
+      icon: Flame,
+    },
+    {
+      step: '03',
+      titleFa: 'بارگذاری افزونه موقت (Load Temporary Add-on)',
+      titleEn: 'Load Temporary Add-on',
+      descFa: 'روی دکمه‌ی Load Temporary Add-on... کلیک کنید.',
+      descEn: 'Click the "Load Temporary Add-on..." button.',
+      icon: ShieldCheck,
+    },
+    {
+      step: '04',
+      titleFa: 'انتخاب فایل manifest.json',
+      titleEn: 'Select manifest.json',
+      descFa: 'به داخل پوشه zoom-extension-v2 رفته و فایل manifest.json را انتخاب کنید. افزونه فوراً فعال می‌شود!',
+      descEn: 'Navigate into the zoom-extension-v2 folder and select manifest.json. The extension is active immediately!',
+      icon: FolderOpen,
+    },
+  ];
+
+  const currentSteps = activeBrowser === 'chrome' ? chromeSteps : firefoxSteps;
 
   return (
     <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -63,23 +103,51 @@ export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 rounded-xl bg-[#39FF14]/15 border border-[#39FF14] text-[#39FF14]">
-            <Chrome className="w-7 h-7" />
+            {activeBrowser === 'chrome' ? <Chrome className="w-7 h-7" /> : <Flame className="w-7 h-7 text-orange-400" />}
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {lang === 'fa' ? 'راهنمای تصویری نصب افزونه در کروم' : 'Visual Guide: How to Install in Chrome'}
+              {lang === 'fa' 
+                ? (activeBrowser === 'chrome' ? 'راهنمای نصب در Google Chrome / Brave / Edge' : 'راهنمای نصب در Mozilla Firefox')
+                : (activeBrowser === 'chrome' ? 'Install Guide: Google Chrome / Brave / Edge' : 'Install Guide: Mozilla Firefox')}
             </h2>
             <p className="text-xs text-zinc-400 mt-0.5">
               {lang === 'fa' 
                 ? 'آموزش گام‌به‌گام نصب مستقیم افزونه Zoom Box Pro پس از دانلود زیپ گیت‌هاب'
-                : 'Step-by-step instructions to install Zoom Box Pro directly in Google Chrome'}
+                : 'Step-by-step instructions to install Zoom Box Pro extension'}
             </p>
           </div>
         </div>
 
+        {/* Browser Switcher Tabs */}
+        <div className="flex gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-xl mb-4">
+          <button
+            onClick={() => setActiveBrowser('chrome')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+              activeBrowser === 'chrome'
+                ? 'bg-[#39FF14] text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+          >
+            <Chrome className="w-4 h-4" />
+            <span>Google Chrome / Brave / Edge</span>
+          </button>
+          <button
+            onClick={() => setActiveBrowser('firefox')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+              activeBrowser === 'firefox'
+                ? 'bg-orange-500 text-white shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+          >
+            <Flame className="w-4 h-4 text-orange-300" />
+            <span>Mozilla Firefox</span>
+          </button>
+        </div>
+
         {/* Steps Grid */}
         <div className="space-y-4 my-6">
-          {steps.map((s, idx) => {
+          {currentSteps.map((s, idx) => {
             const Icon = s.icon;
             return (
               <div 

@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/50 text-xs font-bold text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all cursor-pointer shadow-[0_0_10px_rgba(57,255,20,0.2)]"
           >
             <Chrome className="w-3.5 h-3.5" />
-            <span>{lang === 'fa' ? 'راهنمای نصب کروم' : 'Install Guide'}</span>
+            <span>{lang === 'fa' ? 'راهنمای نصب (کروم / فایرفاکس)' : 'Install (Chrome / Firefox)'}</span>
           </button>
 
           <button
