@@ -1,6 +1,6 @@
 import React from 'react';
 import { ZoomSettings } from '../types';
-import { ChevronDown, ChevronUp, Search, RotateCcw, Sliders, Eye, Sparkles, Layers } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, RotateCcw, Eye, Check } from 'lucide-react';
 
 interface FloatingControlPanelProps {
   settings: ZoomSettings;
@@ -24,8 +24,9 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
   hasZoomedRegion,
 }) => {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [panelPos, setPanelPos] = React.useState({ x: 20, y: 20 });
+  const [panelPos, setPanelPos] = React.useState({ x: 24, y: 24 });
   const [isDragging, setIsDragging] = React.useState(false);
+  const colorInputRef = React.useRef<HTMLInputElement>(null);
   const dragStartRef = React.useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
     mouseX: 0,
     mouseY: 0,
@@ -34,7 +35,7 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
   });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'BUTTON') {
+    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).tagName === 'SELECT') {
       return;
     }
     setIsDragging(true);
@@ -52,8 +53,8 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
       const dx = e.clientX - dragStartRef.current.mouseX;
       const dy = e.clientY - dragStartRef.current.mouseY;
       
-      const newX = Math.max(10, Math.min(window.innerWidth - 260, dragStartRef.current.startX - dx));
-      const newY = Math.max(10, Math.min(window.innerHeight - 300, dragStartRef.current.startY + dy));
+      const newX = Math.max(10, Math.min(window.innerWidth - 320, dragStartRef.current.startX - dx));
+      const newY = Math.max(10, Math.min(window.innerHeight - 400, dragStartRef.current.startY + dy));
       
       setPanelPos({ x: newX, y: newY });
     };
@@ -72,30 +73,27 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
     };
   }, [isDragging]);
 
+  const shortcutText = [
+    settings.shortcutCtrl ? 'Ctrl' : '',
+    settings.shortcutShift ? 'Shift' : '',
+    settings.shortcutAlt ? 'Alt' : '',
+    settings.shortcutKey || 'Z',
+  ].filter(Boolean).join(' + ');
+
   const t = {
-    title: lang === 'fa' ? 'تنظیمات زوم (Zoom Box Pro)' : 'Zoom Box Pro Controls',
+    title: lang === 'fa' ? 'تنظیمات زوم (Zoom Box Pro)' : 'Zoom Box Pro Settings',
     activate: lang === 'fa' ? '🔍 فعال کردن زوم' : '🔍 Activate Zoom Box',
     activeDrawing: lang === 'fa' ? '✏️ در حال کشیدن کادر...' : '✏️ Drawing Box...',
     activeZoomed: lang === 'fa' ? '✅ زوم فعال است' : '✅ Zoom Active',
-    reset: lang === 'fa' ? '❌ بازگشت به 100%' : '❌ Reset to 100%',
-    zoomLevel: lang === 'fa' ? 'سطح زوم:' : 'Zoom Scale:',
-    boxColor: lang === 'fa' ? 'رنگ کادر:' : 'Box Border Color:',
-    overlayOpacity: lang === 'fa' ? 'شفافیت پس‌زمینه:' : 'Overlay Dimming:',
+    reset: lang === 'fa' ? '🔄 ❌ بازگشت به 100%' : '🔄 ❌ Reset to 100%',
     presets: lang === 'fa' ? 'مقادیر سریع:' : 'Quick Presets:',
-    lensMode: lang === 'fa' ? 'حالت ذره‌بین (Lens)' : 'Magnifier Lens Mode',
-    shortcutsConfig: lang === 'fa' ? 'تنظیم کلید میانبر' : 'Custom Shortcut',
-    keyPrompt: lang === 'fa' ? 'کلید میانبر فعال‌سازی:' : 'Activation Shortcut:',
-    shortcutsHint: lang === 'fa' ? `میانبر فعال: ${[
-      settings.shortcutCtrl ? 'Ctrl' : '',
-      settings.shortcutShift ? 'Shift' : '',
-      settings.shortcutAlt ? 'Alt' : '',
-      settings.shortcutKey || 'Z'
-    ].filter(Boolean).join(' + ')} / Esc` : `Shortcut: ${[
-      settings.shortcutCtrl ? 'Ctrl' : '',
-      settings.shortcutShift ? 'Shift' : '',
-      settings.shortcutAlt ? 'Alt' : '',
-      settings.shortcutKey || 'Z'
-    ].filter(Boolean).join(' + ')} / Esc`,
+    zoomLevel: lang === 'fa' ? 'سطح زوم:' : 'Zoom Level:',
+    boxColor: lang === 'fa' ? 'رنگ کادر:' : 'Box Color:',
+    overlayOpacity: lang === 'fa' ? 'شفافیت پس‌زمینه:' : 'Background Dimming:',
+    shortcutTitle: lang === 'fa' ? 'تنظیم کلید میانبر' : 'Shortcut Settings',
+    shortcutKeyLabel: lang === 'fa' ? 'کلید میانبر فعال‌سازی:' : 'Activation Key:',
+    lensMode: lang === 'fa' ? 'حالت ذره‌بین (Lens)' : 'Magnifier Lens (Lens)',
+    footerHint: lang === 'fa' ? `میانبر فعال: ${shortcutText} / Esc` : `Active Shortcut: ${shortcutText} / Esc`,
   };
 
   if (!settings.showPanel) return null;
@@ -107,76 +105,70 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
       style={{
         right: `${panelPos.x}px`,
         top: `${panelPos.y}px`,
-        direction: lang === 'fa' ? 'rtl' : 'ltr',
-        background: 'linear-gradient(135deg, #050505 0%, #121214 55%, #182c16 100%)',
-        boxShadow: isActive ? '0 12px 48px rgba(57, 255, 20, 0.45)' : '0 10px 35px rgba(0, 0, 0, 0.6)',
+        direction: 'rtl',
       }}
-      className={`fixed z-[999990] p-4 rounded-xl border-2 transition-all duration-200 select-none ${
-        isActive ? 'border-[#39FF14]' : 'border-[#39FF14]/60 hover:border-[#39FF14]'
-      } backdrop-blur-md min-w-[240px] max-w-[280px] text-zinc-100 ${
-        isCollapsed ? 'min-w-0 p-2.5' : ''
+      className={`fixed z-[999990] w-[310px] bg-[#090d0b]/95 backdrop-blur-xl rounded-[20px] border-2 border-[#39FF14] shadow-[0_12px_45px_rgba(0,0,0,0.8),0_0_20px_rgba(57,255,20,0.25)] transition-all duration-200 select-none text-zinc-100 p-4 ${
+        isCollapsed ? 'w-[280px] p-3' : ''
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-2 cursor-move pb-1 border-b border-zinc-800/80">
+      <div className="flex items-center justify-between pb-3 cursor-move border-b border-zinc-800/80">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#39FF14] animate-pulse" />
-          {!isCollapsed && (
-            <span className="text-xs font-bold text-[#87CEEB] tracking-wide">
-              {t.title}
-            </span>
-          )}
+          <span className="w-3 h-3 rounded-full bg-[#39FF14] shadow-[0_0_10px_#39FF14] inline-block animate-pulse" />
+          <span className="text-[13px] font-bold text-[#7dd3fc] tracking-wide">
+            {t.title}
+          </span>
         </div>
-        
+
         <button
           id="zoom-toggle-panel-btn"
           onClick={(e) => {
             e.stopPropagation();
             setIsCollapsed(!isCollapsed);
           }}
-          className="p-1 px-2 text-xs font-bold rounded border border-[#87CEEB]/60 bg-black text-[#39FF14] hover:bg-[#87CEEB] hover:text-black hover:border-[#39FF14] transition-all cursor-pointer"
-          title={isCollapsed ? 'Expand' : 'Collapse'}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#38bdf8]/80 bg-black text-[#39FF14] hover:bg-[#38bdf8]/20 transition-all cursor-pointer shadow-sm"
+          title={isCollapsed ? 'باز کردن پنل' : 'کوچک کردن پنل'}
         >
-          {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+          {isCollapsed ? <ChevronDown className="w-4 h-4 text-[#39FF14]" /> : <ChevronUp className="w-4 h-4 text-[#39FF14]" />}
         </button>
       </div>
 
       {!isCollapsed && (
-        <div id="zoom-settings-content" className="flex flex-col gap-2.5 pt-1">
-          {/* Main Action Buttons */}
+        <div id="zoom-settings-content" className="flex flex-col gap-3 pt-3">
+          {/* Main Action Button 1: فعال کردن زوم */}
           <button
             id="zoom-activate-btn"
             onClick={onToggleActive}
-            className={`w-full py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer border-2 ${
+            className={`w-full py-2.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border-2 ${
               isActive
-                ? 'bg-[#39FF14] text-black border-[#87CEEB] shadow-[0_0_15px_rgba(57,255,20,0.5)]'
-                : 'bg-black text-[#39FF14] border-[#87CEEB] hover:bg-[#87CEEB] hover:text-black hover:border-[#39FF14]'
+                ? 'bg-[#39FF14] text-black border-[#38bdf8] shadow-[0_0_20px_rgba(57,255,20,0.6)]'
+                : 'bg-black text-[#39FF14] border-[#38bdf8] hover:bg-[#38bdf8]/15 hover:shadow-[0_0_15px_rgba(56,189,248,0.3)]'
             }`}
           >
             {isDrawing ? t.activeDrawing : hasZoomedRegion ? t.activeZoomed : t.activate}
           </button>
 
+          {/* Main Action Button 2: بازگشت به 100% */}
           <button
             id="zoom-reset-btn"
             onClick={onResetZoom}
-            className="w-full py-1.5 px-3 rounded-lg text-xs font-bold bg-zinc-950 text-rose-400 border border-rose-500/60 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-[#140507] text-[#fb7185] border-[1.5px] border-[#e11d48]/80 hover:bg-[#e11d48]/20 hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
             {t.reset}
           </button>
 
-          {/* Quick Zoom Presets */}
-          <div className="flex flex-col gap-1 text-[11px] text-zinc-300">
-            <span className="text-[#87CEEB] font-medium">{t.presets}</span>
-            <div className="grid grid-cols-4 gap-1">
+          {/* Quick Presets (مقادیر سریع) */}
+          <div className="flex flex-col gap-1.5 pt-1">
+            <span className="text-[#7dd3fc] text-xs font-bold">{t.presets}</span>
+            <div className="grid grid-cols-4 gap-1.5">
               {[150, 200, 300, 400].map((preset) => (
                 <button
                   key={preset}
                   onClick={() => onUpdateSettings({ zoomLevel: preset })}
-                  className={`py-1 rounded text-[10px] font-semibold border transition-all cursor-pointer ${
+                  className={`py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                     settings.zoomLevel === preset
-                      ? 'bg-[#39FF14] text-black border-[#39FF14]'
-                      : 'bg-black/60 text-zinc-300 border-zinc-700 hover:border-[#87CEEB] hover:text-[#87CEEB]'
+                      ? 'bg-[#39FF14]/20 text-[#39FF14] border-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.4)]'
+                      : 'bg-zinc-900/90 text-zinc-300 border-zinc-700/80 hover:border-[#7dd3fc] hover:text-white'
                   }`}
                 >
                   {preset}%
@@ -185,11 +177,14 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
             </div>
           </div>
 
-          {/* Zoom Level Slider */}
-          <div className="flex flex-col gap-1 text-xs">
-            <div className="flex justify-between items-center text-[#87CEEB]">
-              <label htmlFor="zoom-level" className="font-semibold">{t.zoomLevel}</label>
-              <span id="zoom-level-display" className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-[#39FF14]/20 text-[#39FF14] border border-[#87CEEB]/50">
+          {/* Zoom Level Slider (سطح زوم) */}
+          <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex justify-between items-center">
+              <span className="text-[#7dd3fc] text-xs font-bold">{t.zoomLevel}</span>
+              <span
+                id="zoom-level-display"
+                className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/50 shadow-sm"
+              >
                 {settings.zoomLevel}%
               </span>
             </div>
@@ -201,30 +196,41 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
               step="25"
               value={settings.zoomLevel}
               onChange={(e) => onUpdateSettings({ zoomLevel: parseInt(e.target.value, 10) })}
-              className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#39FF14]"
+              className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
             />
           </div>
 
-          {/* Box Color & Opacity Controls */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <div className="flex flex-col gap-1 text-[11px] text-[#87CEEB]">
-              <label htmlFor="box-color" className="font-medium truncate">{t.boxColor}</label>
-              <div className="flex items-center gap-1.5">
+          {/* Box Color & Background Dimming Controls (رنگ کادر و شفافیت پس‌زمینه) */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* Right: رنگ کادر */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[#7dd3fc] text-xs font-bold">{t.boxColor}</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => colorInputRef.current?.click()}
+                  className="w-9 h-8 rounded-lg border-2 border-white/60 shadow-md cursor-pointer transition-transform hover:scale-105"
+                  style={{ backgroundColor: settings.boxColor }}
+                  title="انتخاب رنگ کادر"
+                />
                 <input
+                  ref={colorInputRef}
                   type="color"
-                  id="box-color"
                   value={settings.boxColor}
                   onChange={(e) => onUpdateSettings({ boxColor: e.target.value })}
-                  className="w-8 h-7 rounded border border-[#87CEEB] bg-black cursor-pointer p-0"
+                  className="sr-only"
                 />
-                <span className="text-[10px] font-mono text-zinc-400">{settings.boxColor}</span>
+                <span className="text-[11px] font-mono text-zinc-300 font-semibold uppercase">
+                  {settings.boxColor}
+                </span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-1 text-[11px] text-[#87CEEB]">
-              <div className="flex justify-between">
-                <label htmlFor="overlay-opacity" className="font-medium truncate">{t.overlayOpacity}</label>
-                <span className="text-zinc-300 font-mono text-[10px]">{settings.opacity}%</span>
+            {/* Left: شفافیت پس‌زمینه */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-[#7dd3fc] text-xs font-bold">{t.overlayOpacity}</span>
+                <span className="text-zinc-300 font-mono text-[11px] font-bold">{settings.opacity}%</span>
               </div>
               <input
                 type="range"
@@ -234,89 +240,117 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
                 step="5"
                 value={settings.opacity}
                 onChange={(e) => onUpdateSettings({ opacity: parseInt(e.target.value, 10) })}
-                className="w-full h-1.5 mt-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#87CEEB]"
+                className="w-full h-1.5 mt-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
               />
             </div>
           </div>
 
-          {/* Keyboard Shortcut Customization UI */}
-          <div className="flex flex-col gap-1.5 pt-2 border-t border-zinc-800/80 text-[11px]">
-            <div className="flex items-center justify-between text-[#87CEEB] font-medium">
-              <span>{t.shortcutsConfig}</span>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-[#39FF14]">
-                {[
-                  settings.shortcutCtrl ? 'Ctrl' : '',
-                  settings.shortcutShift ? 'Shift' : '',
-                  settings.shortcutAlt ? 'Alt' : '',
-                  settings.shortcutKey || 'Z'
-                ].filter(Boolean).join(' + ')}
+          {/* Shortcut Settings (تنظیم کلید میانبر) */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800/80">
+            <div className="flex items-center justify-between">
+              <span className="text-[#7dd3fc] text-xs font-bold">{t.shortcutTitle}</span>
+              <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-black border border-[#38bdf8]/60 text-[#39FF14] font-bold">
+                {shortcutText}
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-1 bg-zinc-900/60 p-1.5 rounded-lg border border-zinc-800">
-              <label className="flex items-center gap-1 text-[10px] text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.shortcutCtrl ?? true}
-                  onChange={(e) => onUpdateSettings({ shortcutCtrl: e.target.checked })}
-                  className="accent-[#39FF14] w-3 h-3 cursor-pointer"
-                />
-                <span>Ctrl</span>
-              </label>
-              <label className="flex items-center gap-1 text-[10px] text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.shortcutShift ?? true}
-                  onChange={(e) => onUpdateSettings({ shortcutShift: e.target.checked })}
-                  className="accent-[#39FF14] w-3 h-3 cursor-pointer"
-                />
-                <span>Shift</span>
-              </label>
-              <label className="flex items-center gap-1 text-[10px] text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.shortcutAlt ?? false}
-                  onChange={(e) => onUpdateSettings({ shortcutAlt: e.target.checked })}
-                  className="accent-[#39FF14] w-3 h-3 cursor-pointer"
-                />
-                <span>Alt</span>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 mt-0.5">
-              <span className="text-zinc-400 text-[10px]">{t.keyPrompt}</span>
-              <select
-                value={settings.shortcutKey || 'Z'}
-                onChange={(e) => onUpdateSettings({ shortcutKey: e.target.value })}
-                className="bg-black text-[#39FF14] border border-[#87CEEB]/60 rounded px-2 py-0.5 text-xs font-mono font-bold cursor-pointer"
+            {/* Modifier Checkboxes in an enclosed container */}
+            <div className="grid grid-cols-3 gap-1 bg-zinc-950/80 p-2 rounded-xl border border-zinc-800/90">
+              {/* Ctrl */}
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ shortcutCtrl: !settings.shortcutCtrl })}
+                className="flex items-center justify-center gap-1.5 cursor-pointer text-xs text-zinc-200 font-semibold"
               >
-                {['Z', 'X', 'C', 'V', 'A', 'S', 'F', 'Q', 'E', 'R', 'B', 'K', 'L', '1', '2', '3'].map((k) => (
-                  <option key={k} value={k}>{k}</option>
-                ))}
-              </select>
+                <span>Ctrl</span>
+                <div
+                  className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+                    settings.shortcutCtrl ? 'bg-[#39FF14] text-black' : 'border border-zinc-600 bg-zinc-900'
+                  }`}
+                >
+                  {settings.shortcutCtrl && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </div>
+              </button>
+
+              {/* Shift */}
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ shortcutShift: !settings.shortcutShift })}
+                className="flex items-center justify-center gap-1.5 cursor-pointer text-xs text-zinc-200 font-semibold"
+              >
+                <span>Shift</span>
+                <div
+                  className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+                    settings.shortcutShift ? 'bg-[#39FF14] text-black' : 'border border-zinc-600 bg-zinc-900'
+                  }`}
+                >
+                  {settings.shortcutShift && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </div>
+              </button>
+
+              {/* Alt */}
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ shortcutAlt: !settings.shortcutAlt })}
+                className="flex items-center justify-center gap-1.5 cursor-pointer text-xs text-zinc-200 font-semibold"
+              >
+                <span>Alt</span>
+                <div
+                  className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+                    settings.shortcutAlt ? 'bg-[#39FF14] text-black' : 'border border-zinc-500 bg-zinc-900'
+                  }`}
+                >
+                  {settings.shortcutAlt && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </div>
+              </button>
+            </div>
+
+            {/* Activation Key Selector */}
+            <div className="flex items-center justify-between pt-0.5">
+              <span className="text-zinc-300 text-xs font-semibold">{t.shortcutKeyLabel}</span>
+              <div className="relative">
+                <select
+                  value={settings.shortcutKey || 'Z'}
+                  onChange={(e) => onUpdateSettings({ shortcutKey: e.target.value })}
+                  className="appearance-none bg-black text-[#39FF14] border border-[#38bdf8]/70 rounded-lg px-3 py-1 pr-6 text-xs font-mono font-bold cursor-pointer hover:border-[#39FF14] focus:outline-none"
+                >
+                  {['Z', 'X', 'C', 'V', 'A', 'S', 'F', 'Q', 'E', 'R', 'B', 'K', 'L', '1', '2', '3'].map((k) => (
+                    <option key={k} value={k} className="bg-zinc-900 text-white">
+                      {k}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-[#39FF14] absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
           </div>
 
-          {/* Lens Mode Toggle */}
-          <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80 text-[11px]">
-            <label className="text-zinc-300 flex items-center gap-1.5 cursor-pointer">
-              <Eye className="w-3.5 h-3.5 text-[#39FF14]" />
-              <span>{t.lensMode}</span>
-            </label>
-            <input
-              type="checkbox"
-              checked={settings.lensMode}
-              onChange={(e) => onUpdateSettings({ lensMode: e.target.checked })}
-              className="accent-[#39FF14] w-4 h-4 cursor-pointer"
-            />
+          {/* Lens Mode Toggle (حالت ذره‌بین) */}
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-[#39FF14]" />
+              <span className="text-zinc-200 text-xs font-bold">{t.lensMode}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => onUpdateSettings({ lensMode: !settings.lensMode })}
+              className={`w-5 h-5 rounded flex items-center justify-center transition-all cursor-pointer ${
+                settings.lensMode
+                  ? 'bg-[#39FF14] text-black shadow-[0_0_8px_#39FF14]'
+                  : 'border border-zinc-600 bg-zinc-900'
+              }`}
+            >
+              {settings.lensMode && <Check className="w-4 h-4 stroke-[3]" />}
+            </button>
           </div>
 
-          {/* Footnote Shortcut */}
-          <div className="text-[9px] text-zinc-400 text-center font-mono pt-1">
-            {t.shortcutsHint}
+          {/* Footer Shortcut Hint */}
+          <div className="text-[11px] text-zinc-400 text-center font-mono pt-1">
+            {t.footerHint}
           </div>
         </div>
       )}
     </div>
   );
 };
+

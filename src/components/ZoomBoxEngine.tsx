@@ -391,6 +391,33 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
         </div>
       )}
 
+      {/* Interactive Magnifier Lens Mode HUD when enabled and cursor moves */}
+      {settings.lensMode && lensPos && !isDrawing && !zoomedRegion && (
+        <div
+          id="zoom-lens-indicator"
+          className="fixed z-[999984] pointer-events-none rounded-full border-2 transition-transform duration-75 shadow-2xl flex items-center justify-center backdrop-contrast-125"
+          style={{
+            left: `${lensPos.x - 90}px`,
+            top: `${lensPos.y - 90}px`,
+            width: '180px',
+            height: '180px',
+            borderColor: settings.boxColor,
+            boxShadow: `0 0 25px ${hexToRgba(settings.boxColor, 0.6)}, inset 0 0 20px ${hexToRgba(settings.boxColor, 0.2)}`,
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div
+            className="absolute top-1 text-[9px] font-mono font-bold px-2 py-0.5 rounded-full text-black"
+            style={{ backgroundColor: settings.boxColor }}
+          >
+            LENS {settings.zoomLevel}%
+          </div>
+          {/* Lens crosshairs */}
+          <div className="w-4 h-0.5 opacity-60" style={{ backgroundColor: settings.boxColor }} />
+          <div className="w-0.5 h-4 opacity-60 -ml-2" style={{ backgroundColor: settings.boxColor }} />
+        </div>
+      )}
+
       {/* Floating Control Panel */}
       <FloatingControlPanel
         settings={settings}

@@ -13,45 +13,66 @@
     }
 
     body {
-      width: 300px;
-      background-color: #09090b;
+      width: 320px;
+      background: #090d0b;
       color: #f4f4f5;
-      padding: 16px;
+      padding: 14px;
       user-select: none;
+      border: 2px solid #39FF14;
+      border-radius: 18px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(57, 255, 20, 0.2);
     }
 
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #27272a;
-      padding-bottom: 12px;
-      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(39, 39, 42, 0.8);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .header-title {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 700;
+      color: #7dd3fc;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #39FF14;
+      box-shadow: 0 0 10px #39FF14;
+      display: inline-block;
+    }
+
+    .header-btn {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid rgba(56, 189, 248, 0.8);
+      background: #000000;
       color: #39FF14;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .header-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
     }
 
-    .badge {
-      font-size: 10px;
-      background: #27272a;
-      color: #a1a1aa;
-      padding: 2px 6px;
-      border-radius: 4px;
-      direction: ltr;
-    }
-
-    .btn {
+    .btn-main {
       width: 100%;
       padding: 10px 14px;
-      border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: 700;
       font-size: 13px;
       cursor: pointer;
@@ -63,147 +84,372 @@
       margin-bottom: 8px;
     }
 
-    .btn-primary {
-      background: #39FF14;
-      color: #09090b;
-      box-shadow: 0 0 15px rgba(57, 255, 20, 0.25);
+    .btn-activate {
+      background: #000000;
+      color: #39FF14;
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
     }
-
-    .btn-primary:hover {
-      background: #2ecc71;
-      transform: translateY(-1px);
-      box-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
-    }
-
-    .btn-secondary {
-      background: #18181b;
-      color: #e4e4e7;
-      border: 1px solid #27272a;
-    }
-
-    .btn-secondary:hover {
-      background: #27272a;
-      color: #ffffff;
+    .btn-activate:hover {
+      background: rgba(56, 189, 248, 0.15);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
     }
 
     .btn-reset {
-      background: #18181b;
-      color: #f43f5e;
-      border: 1px solid rgba(244, 63, 94, 0.3);
+      background: #140507;
+      color: #fb7185;
+      border: 1.5px solid rgba(225, 29, 72, 0.8);
+      padding: 8px 14px;
     }
-
     .btn-reset:hover {
-      background: rgba(244, 63, 94, 0.15);
-      border-color: #f43f5e;
+      background: rgba(225, 29, 72, 0.2);
+      color: #ffffff;
     }
 
-    .section {
-      background: #18181b;
-      border: 1px solid #27272a;
+    .presets-wrap {
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+    .presets-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #7dd3fc;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .preset-btn {
+      padding: 6px 0;
       border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
+      border: 1px solid #3f3f46;
+      background: #18181b;
+      color: #f4f4f5;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .preset-btn:hover {
+      border-color: #7dd3fc;
+      color: #ffffff;
+    }
+    .preset-btn.active {
+      border-color: #39FF14;
+      background: rgba(57, 255, 20, 0.15);
+      color: #39FF14;
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
     }
 
-    .slider-row {
+    .slider-section {
+      margin-bottom: 8px;
+    }
+    .slider-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
-      color: #a1a1aa;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
-
-    .slider-val {
+    .slider-title {
+      font-size: 12px;
       font-weight: 700;
+      color: #7dd3fc;
+    }
+    .badge-val {
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(57, 255, 20, 0.15);
+      border: 1px solid rgba(57, 255, 20, 0.5);
       color: #39FF14;
-      font-size: 13px;
     }
 
     input[type="range"] {
       width: 100%;
-      accent-color: #39FF14;
+      accent-color: #ffffff;
       cursor: pointer;
       height: 4px;
       background: #27272a;
       border-radius: 2px;
     }
 
-    .footer-tip {
+    .two-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .col-header {
       font-size: 11px;
-      color: #71717a;
+      font-weight: 700;
+      color: #7dd3fc;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .color-picker-box {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding-top: 8px;
-      border-top: 1px solid #27272a;
+      gap: 8px;
+      margin-top: 4px;
     }
-
-    .kbd {
-      background: #27272a;
-      color: #e4e4e7;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      direction: ltr;
-      border: 1px solid #3f3f46;
+    .color-preview-btn {
+      width: 36px;
+      height: 32px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      background: #39FF14;
+      cursor: pointer;
     }
-
-    .msg-box {
-      display: none;
-      padding: 8px 10px;
-      border-radius: 6px;
+    .hex-code {
+      font-family: monospace;
       font-size: 11px;
-      margin-bottom: 10px;
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      line-height: 1.4;
+      color: #d4d4d8;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .shortcut-box {
+      border-top: 1px solid rgba(39, 39, 42, 0.8);
+      padding-top: 8px;
+      margin-bottom: 8px;
+    }
+    .shortcut-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .shortcut-badge {
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #39FF14;
+      background: #000;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .modifiers-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 10px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+    }
+    .mod-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #f4f4f5;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .mod-checkbox {
+      width: 15px;
+      height: 15px;
+      border-radius: 4px;
+      background: #18181b;
+      border: 1px solid #52525b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #000;
+      font-weight: 900;
+    }
+    .mod-checkbox.checked {
+      background: #39FF14;
+      border-color: #39FF14;
+    }
+
+    .key-select-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .key-select-label {
+      font-size: 11px;
+      color: #d4d4d8;
+      font-weight: 600;
+    }
+    .key-dropdown {
+      background: #000;
+      color: #39FF14;
+      border: 1px solid rgba(56, 189, 248, 0.7);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .lens-row {
+      border-top: 1px solid rgba(39, 39, 42, 0.8);
+      padding-top: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lens-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f4f4f5;
+    }
+
+    .footer-text {
+      text-align: center;
+      font-family: monospace;
+      font-size: 10px;
+      color: #a1a1aa;
+      padding-top: 4px;
+    }
+
+    .restricted-msg {
+      display: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      margin-bottom: 8px;
+      background: rgba(225, 29, 72, 0.15);
+      color: #fda4af;
+      border: 1px solid rgba(225, 29, 72, 0.3);
+      line-height: 1.3;
     }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <div class="header-title">
-      <span>🔍</span>
-      <span>Zoom Box Pro</span>
+      <span class="status-dot"></span>
+      <span>تنظیمات زوم (Zoom Box Pro)</span>
     </div>
-    <span class="badge">v8.5.0</span>
+    <button id="btn-collapse" class="header-btn" title="بستن">^</button>
   </div>
 
-  <div id="restricted-notice" class="msg-box">
-    ⚠️ این صفحه سیستمی مرورگر است. لطفاً افزونه را روی یک وب‌سایت عادی (مانند گوگل یا ویکی‌پدیا) اجرا نمایید.
+  <div id="restricted-notice" class="restricted-msg">
+    ⚠️ این صفحه سیستمی است. لطفاً افزونه را روی یک وب‌سایت عادی اجرا کنید.
   </div>
 
-  <button id="btn-draw" class="btn btn-primary">
-    <span>✏️</span>
-    <span>شروع انتخاب و رسم کادر زوم</span>
+  <!-- Action Buttons -->
+  <button id="btn-draw" class="btn-main btn-activate">
+    <span>🔍</span>
+    <span id="btn-draw-text">فعال کردن زوم</span>
   </button>
 
-  <button id="btn-toggle-panel" class="btn btn-secondary">
-    <span>📌</span>
-    <span>نمایش / پنهان کردن پنل در صفحه</span>
+  <button id="btn-reset" class="btn-main btn-reset">
+    <span>🔄 ❌</span>
+    <span>بازگشت به 100%</span>
   </button>
 
-  <div class="section">
-    <div class="slider-row">
-      <span>میزان بزرگ‌نمایی:</span>
-      <span id="zoom-value" class="slider-val">200%</span>
+  <!-- Quick Presets -->
+  <div class="presets-wrap">
+    <span class="presets-label">مقادیر سریع:</span>
+    <div class="presets-grid">
+      <button class="preset-btn" data-val="150">150%</button>
+      <button class="preset-btn active" data-val="200">200%</button>
+      <button class="preset-btn" data-val="300">300%</button>
+      <button class="preset-btn" data-val="400">400%</button>
     </div>
-    <input type="range" id="zoom-slider" min="125" max="500" step="25" value="200">
   </div>
 
-  <button id="btn-reset" class="btn btn-reset">
-    <span>🔄</span>
-    <span>بازگشت نرم به حالت عادی (100%)</span>
-  </button>
-
-  <div class="footer-tip">
-    <span>کلید میانبر سریع:</span>
-    <span class="kbd">Ctrl + Shift + Z</span>
+  <!-- Zoom Level Slider -->
+  <div class="slider-section">
+    <div class="slider-header">
+      <span class="slider-title">سطح زوم:</span>
+      <span id="zoom-badge" class="badge-val">200%</span>
+    </div>
+    <input type="range" id="zoom-slider" min="50" max="500" step="25" value="200">
   </div>
 
-  <!-- بارگذاری اسکریپت پاپ‌آپ -->
+  <!-- Box Color & Dimming -->
+  <div class="two-cols">
+    <div>
+      <span class="col-header">رنگ کادر:</span>
+      <div class="color-picker-box">
+        <button id="color-preview" class="color-preview-btn"></button>
+        <input type="color" id="color-input" value="#39FF14" style="display:none;">
+        <span id="hex-label" class="hex-code">#39FF14</span>
+      </div>
+    </div>
+    <div>
+      <div class="col-header">
+        <span>شفافیت پس‌زمینه:</span>
+        <span id="opacity-val" style="color:#d4d4d8;font-family:monospace;">50%</span>
+      </div>
+      <input type="range" id="opacity-slider" min="0" max="95" step="5" value="50" style="margin-top:6px;">
+    </div>
+  </div>
+
+  <!-- Shortcuts -->
+  <div class="shortcut-box">
+    <div class="shortcut-header">
+      <span class="slider-title">تنظیم کلید میانبر</span>
+      <span id="shortcut-display" class="shortcut-badge">Ctrl + Shift + Z</span>
+    </div>
+    <div class="modifiers-container">
+      <div class="mod-item" id="mod-ctrl">
+        <span>Ctrl</span>
+        <div class="mod-checkbox checked" id="chk-ctrl">✓</div>
+      </div>
+      <div class="mod-item" id="mod-shift">
+        <span>Shift</span>
+        <div class="mod-checkbox checked" id="chk-shift">✓</div>
+      </div>
+      <div class="mod-item" id="mod-alt">
+        <span>Alt</span>
+        <div class="mod-checkbox" id="chk-alt"></div>
+      </div>
+    </div>
+    <div class="key-select-row">
+      <span class="key-select-label">کلید میانبر فعال‌سازی:</span>
+      <select id="key-dropdown" class="key-dropdown">
+        <option value="Z">Z</option>
+        <option value="X">X</option>
+        <option value="C">C</option>
+        <option value="V">V</option>
+        <option value="A">A</option>
+        <option value="S">S</option>
+        <option value="F">F</option>
+        <option value="Q">Q</option>
+        <option value="E">E</option>
+        <option value="R">R</option>
+        <option value="B">B</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Lens Mode -->
+  <div class="lens-row">
+    <div class="lens-title">
+      <span style="color:#39FF14;">👁️</span>
+      <span>حالت ذره‌بین (Lens)</span>
+    </div>
+    <div class="mod-checkbox" id="chk-lens" style="cursor:pointer;"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-text" id="footer-text">
+    میانبر فعال: Ctrl + Shift + Z / Esc
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

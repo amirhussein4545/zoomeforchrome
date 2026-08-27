@@ -66,6 +66,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       await this.loadSettings();
       this.injectHostGlobalStyles();
       this.buildShadowDOM();
+      this.updateStyles();
       this.bindListeners();
     }
 
@@ -472,6 +473,79 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       (document.documentElement || document.body).appendChild(this.rootContainer);
     }
 
+    updateStyles() {
+      if (!this.shadowRoot) return;
+      let styleEl = this.shadowRoot.querySelector('#zbp-dynamic-style');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'zbp-dynamic-style';
+        this.shadowRoot.appendChild(styleEl);
+      }
+      const c = this.settings.boxColor || '#39FF14';
+      
+      // Convert hex to rgb for rgba transparency
+      let r = 57, g = 255, b = 20;
+      if (c.match(/^#([0-9a-f]{6})$/i)) {
+        r = parseInt(c.slice(1, 3), 16);
+        g = parseInt(c.slice(3, 5), 16);
+        b = parseInt(c.slice(5, 7), 16);
+      }
+      
+      styleEl.textContent = \`
+        .zbp-overlay-tip, .zbp-dimensions-badge {
+          color: \${c} !important;
+          border-color: rgba(\${r}, \${g}, \${b}, 0.5) !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(\${r}, \${g}, \${b}, 0.3) !important;
+        }
+        #zbp-dim-badge span {
+          background: \${c} !important;
+        }
+        #zbp-selection-box {
+          border-color: \${c} !important;
+          background: rgba(\${r}, \${g}, \${b}, 0.16) !important;
+          box-shadow: 0 0 20px rgba(\${r}, \${g}, \${b}, 0.65), inset 0 0 12px rgba(\${r}, \${g}, \${b}, 0.2) !important;
+        }
+        .zbp-corner {
+          border-color: \${c} !important;
+        }
+        @keyframes zbp-box-pulse {
+          0%, 100% { box-shadow: 0 0 18px rgba(\${r}, \${g}, \${b}, 0.6), inset 0 0 10px rgba(\${r}, \${g}, \${b}, 0.15) !important; }
+          50% { box-shadow: 0 0 28px rgba(\${r}, \${g}, \${b}, 0.9), inset 0 0 18px rgba(\${r}, \${g}, \${b}, 0.3) !important; }
+        }
+        @keyframes zbp-fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        #zbp-selection-box {
+          animation: zbp-box-pulse 2s ease-in-out infinite, zbp-fade-in 0.3s ease-out !important;
+        }
+        @keyframes zbp-zoom-lock {
+          0% { transform: scale(1) !important; opacity: 1 !important; border-color: #ffffff !important; box-shadow: 0 0 35px rgba(\${r}, \${g}, \${b}, 1), 0 0 70px rgba(\${r}, \${g}, \${b}, 0.5) !important; }
+          60% { transform: scale(1.04) !important; opacity: 0.9 !important; }
+          100% { transform: scale(1.08) !important; opacity: 0 !important; filter: blur(2px) !important; }
+        }
+      \`;
+
+      // Update dimming effect
+      if (this.isZoomed) {
+        let dimOverlay = this.shadowRoot.querySelector('#zbp-dim-overlay');
+        if (!dimOverlay) {
+          dimOverlay = document.createElement('div');
+          dimOverlay.id = 'zbp-dim-overlay';
+          dimOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483640;transition:opacity 0.65s;';
+          // Insert it as the first child of shadowRoot so it's behind everything else in the shadow DOM but above the page
+          this.shadowRoot.insertBefore(dimOverlay, this.shadowRoot.firstChild);
+        }
+        dimOverlay.style.backgroundColor = \`rgba(0,0,0,\${this.settings.opacity / 100})\`;
+        dimOverlay.style.opacity = '1';
+      } else {
+        const dimOverlay = this.shadowRoot.querySelector('#zbp-dim-overlay');
+        if (dimOverlay) {
+          dimOverlay.style.opacity = '0';
+        }
+      }
+    }
+
     applyPanelValues() {
       if (!this.shadowRoot) return;
       const levelVal = this.shadowRoot.querySelector('#zbp-level-val');
@@ -493,6 +567,13 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
             if (req.zoomLevel) {
               this.settings.zoomLevel = req.zoomLevel;
               this.applyPanelValues();
+              if (this.isZoomed) this.updateZoomScale();
+            }
+          } else if (req.action === 'updateSettings') {
+            if (req.settings) {
+              this.settings = { ...this.settings, ...req.settings };
+              this.applyPanelValues();
+              this.updateStyles();
               if (this.isZoomed) this.updateZoomScale();
             }
           } else if (req.action === 'resetZoom') {
@@ -530,7 +611,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       });
 
       this.shadowRoot.querySelector('#zbp-bar-dec').addEventListener('click', async () => {
-        this.settings.zoomLevel = Math.max(100, this.settings.zoomLevel - 25);
+        this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
         this.applyPanelValues();
         this.updateZoomScale();
         await this.saveSettings();
@@ -549,11 +630,22 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
 
       // میانبرهای کیبورد
       window.addEventListener('keydown', (e) => {
-        const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-        const isShift = e.shiftKey;
-        const isZ = e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ';
+        // Only trigger shortcut if not typing in input
+        const tag = e.target.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
-        if (isCtrlOrMeta && isShift && isZ) {
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+        const isAlt = e.altKey;
+        const key = e.key.toUpperCase();
+        const code = e.code.replace('Key', '').toUpperCase();
+
+        const matchCtrl = this.settings.shortcutCtrl ? isCtrl : !isCtrl;
+        const matchShift = this.settings.shortcutShift ? isShift : !isShift;
+        const matchAlt = this.settings.shortcutAlt ? isAlt : !isAlt;
+        const matchKey = (key === this.settings.shortcutKey.toUpperCase()) || (code === this.settings.shortcutKey.toUpperCase());
+
+        if (matchCtrl && matchShift && matchAlt && matchKey) {
           e.preventDefault();
           e.stopPropagation();
           if (this.isDrawingMode) {
@@ -685,6 +777,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         const valEl = this.shadowRoot.querySelector('#zbp-bar-val');
         if (valEl) valEl.textContent = \`\${this.settings.zoomLevel}%\`;
       }
+      this.updateStyles();
     }
 
     updateZoomScale() {
@@ -697,6 +790,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         const valEl = this.shadowRoot.querySelector('#zbp-bar-val');
         if (valEl) valEl.textContent = \`\${this.settings.zoomLevel}%\`;
       }
+      this.updateStyles();
     }
 
     zoomOutSmoothly() {
@@ -711,6 +805,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       if (this.statusBar) {
         this.statusBar.style.display = 'none';
       }
+      this.updateStyles();
 
       setTimeout(() => {
         if (!this.isZoomed) {
@@ -815,45 +910,66 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
 
     body {
-      width: 300px;
-      background-color: #09090b;
+      width: 320px;
+      background: #090d0b;
       color: #f4f4f5;
-      padding: 16px;
+      padding: 14px;
       user-select: none;
+      border: 2px solid #39FF14;
+      border-radius: 18px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(57, 255, 20, 0.2);
     }
 
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #27272a;
-      padding-bottom: 12px;
-      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(39, 39, 42, 0.8);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .header-title {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 700;
+      color: #7dd3fc;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #39FF14;
+      box-shadow: 0 0 10px #39FF14;
+      display: inline-block;
+    }
+
+    .header-btn {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid rgba(56, 189, 248, 0.8);
+      background: #000000;
       color: #39FF14;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .header-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
     }
 
-    .badge {
-      font-size: 10px;
-      background: #27272a;
-      color: #a1a1aa;
-      padding: 2px 6px;
-      border-radius: 4px;
-      direction: ltr;
-    }
-
-    .btn {
+    .btn-main {
       width: 100%;
       padding: 10px 14px;
-      border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: 700;
       font-size: 13px;
       cursor: pointer;
@@ -865,209 +981,486 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       margin-bottom: 8px;
     }
 
-    .btn-primary {
-      background: #39FF14;
-      color: #09090b;
-      box-shadow: 0 0 15px rgba(57, 255, 20, 0.25);
+    .btn-activate {
+      background: #000000;
+      color: #39FF14;
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
     }
-
-    .btn-primary:hover {
-      background: #2ecc71;
-      transform: translateY(-1px);
-      box-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
-    }
-
-    .btn-secondary {
-      background: #18181b;
-      color: #e4e4e7;
-      border: 1px solid #27272a;
-    }
-
-    .btn-secondary:hover {
-      background: #27272a;
-      color: #ffffff;
+    .btn-activate:hover {
+      background: rgba(56, 189, 248, 0.15);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
     }
 
     .btn-reset {
-      background: #18181b;
-      color: #f43f5e;
-      border: 1px solid rgba(244, 63, 94, 0.3);
+      background: #140507;
+      color: #fb7185;
+      border: 1.5px solid rgba(225, 29, 72, 0.8);
+      padding: 8px 14px;
     }
-
     .btn-reset:hover {
-      background: rgba(244, 63, 94, 0.15);
-      border-color: #f43f5e;
+      background: rgba(225, 29, 72, 0.2);
+      color: #ffffff;
     }
 
-    .section {
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 12px;
-    }
-
-    .slider-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #a1a1aa;
+    .presets-wrap {
+      margin-top: 4px;
       margin-bottom: 8px;
     }
-
-    .slider-val {
-      color: #39FF14;
+    .presets-label {
+      font-size: 11px;
       font-weight: 700;
+      color: #7dd3fc;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .preset-btn {
+      padding: 6px 0;
+      border-radius: 8px;
+      border: 1px solid #3f3f46;
+      background: #18181b;
+      color: #f4f4f5;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .preset-btn:hover {
+      border-color: #7dd3fc;
+      color: #ffffff;
+    }
+    .preset-btn.active {
+      border-color: #39FF14;
+      background: rgba(57, 255, 20, 0.15);
+      color: #39FF14;
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
     }
 
-    input[type=range] {
+    .slider-section {
+      margin-bottom: 8px;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .slider-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #7dd3fc;
+    }
+    .badge-val {
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(57, 255, 20, 0.15);
+      border: 1px solid rgba(57, 255, 20, 0.5);
+      color: #39FF14;
+    }
+
+    input[type="range"] {
       width: 100%;
-      accent-color: #39FF14;
+      accent-color: #ffffff;
+      cursor: pointer;
+      height: 4px;
+      background: #27272a;
+      border-radius: 2px;
+    }
+
+    .two-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .col-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: #7dd3fc;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .color-picker-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .color-preview-btn {
+      width: 36px;
+      height: 32px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      background: #39FF14;
       cursor: pointer;
     }
-
-    .footer-tip {
+    .hex-code {
+      font-family: monospace;
       font-size: 11px;
-      color: #71717a;
-      text-align: center;
-      margin-top: 10px;
+      color: #d4d4d8;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .shortcut-box {
+      border-top: 1px solid rgba(39, 39, 42, 0.8);
+      padding-top: 8px;
+      margin-bottom: 8px;
+    }
+    .shortcut-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .shortcut-badge {
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #39FF14;
+      background: #000;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .modifiers-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 10px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+    }
+    .mod-item {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
+      font-size: 11px;
+      color: #f4f4f5;
+      font-weight: 600;
+      cursor: pointer;
     }
-
-    .kbd {
-      background: #27272a;
-      color: #e4e4e7;
-      padding: 2px 6px;
+    .mod-checkbox {
+      width: 15px;
+      height: 15px;
       border-radius: 4px;
-      font-family: monospace;
-      direction: ltr;
+      background: #18181b;
+      border: 1px solid #52525b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #000;
+      font-weight: 900;
+    }
+    .mod-checkbox.checked {
+      background: #39FF14;
+      border-color: #39FF14;
     }
 
-    .restricted-notice {
+    .key-select-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .key-select-label {
+      font-size: 11px;
+      color: #d4d4d8;
+      font-weight: 600;
+    }
+    .key-dropdown {
+      background: #000;
+      color: #39FF14;
+      border: 1px solid rgba(56, 189, 248, 0.7);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .lens-row {
+      border-top: 1px solid rgba(39, 39, 42, 0.8);
+      padding-top: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lens-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f4f4f5;
+    }
+
+    .footer-text {
+      text-align: center;
+      font-family: monospace;
+      font-size: 10px;
+      color: #a1a1aa;
+      padding-top: 4px;
+    }
+
+    .restricted-msg {
       display: none;
-      background: rgba(244, 63, 94, 0.15);
-      border: 1px solid #f43f5e;
-      color: #f43f5e;
-      padding: 10px;
+      padding: 6px 10px;
       border-radius: 8px;
       font-size: 11px;
-      margin-bottom: 10px;
-      line-height: 1.5;
+      margin-bottom: 8px;
+      background: rgba(225, 29, 72, 0.15);
+      color: #fda4af;
+      border: 1px solid rgba(225, 29, 72, 0.3);
+      line-height: 1.3;
     }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <div class="header-title">
-      <span>🔍</span>
-      <span>Zoom Box Pro</span>
+      <span class="status-dot"></span>
+      <span>تنظیمات زوم (Zoom Box Pro)</span>
     </div>
-    <span class="badge">v8.6.0</span>
+    <button id="btn-collapse" class="header-btn" title="بستن">^</button>
   </div>
 
-  <div id="restricted-notice" class="restricted-notice">
-    ⚠️ این تب یک صفحه سیستمی مرورگر است و اجرای افزونه در آن مسدود است. لطفاً روی یک وب‌سایت معمولی (مثل google.com) تست کنید.
+  <div id="restricted-notice" class="restricted-msg">
+    ⚠️ این صفحه سیستمی است. لطفاً افزونه را روی یک وب‌سایت عادی اجرا کنید.
   </div>
 
-  <button id="btn-draw" class="btn btn-primary">
-    <span>✏️</span>
-    <span>شروع انتخاب و رسم کادر زوم</span>
+  <!-- Action Buttons -->
+  <button id="btn-draw" class="btn-main btn-activate">
+    <span>🔍</span>
+    <span id="btn-draw-text">فعال کردن زوم</span>
   </button>
 
-  <button id="btn-toggle-panel" class="btn btn-secondary">
-    <span>📌</span>
-    <span>نمایش / پنهان کردن پنل در صفحه</span>
+  <button id="btn-reset" class="btn-main btn-reset">
+    <span>🔄 ❌</span>
+    <span>بازگشت به 100%</span>
   </button>
 
-  <div class="section">
-    <div class="slider-row">
-      <span>میزان بزرگ‌نمایی:</span>
-      <span id="zoom-value" class="slider-val">200%</span>
+  <!-- Quick Presets -->
+  <div class="presets-wrap">
+    <span class="presets-label">مقادیر سریع:</span>
+    <div class="presets-grid">
+      <button class="preset-btn" data-val="150">150%</button>
+      <button class="preset-btn active" data-val="200">200%</button>
+      <button class="preset-btn" data-val="300">300%</button>
+      <button class="preset-btn" data-val="400">400%</button>
     </div>
-    <input type="range" id="zoom-slider" min="125" max="500" step="25" value="200">
   </div>
 
-  <button id="btn-reset" class="btn btn-reset">
-    <span>🔄</span>
-    <span>بازگشت نرم به حالت عادی (100%)</span>
-  </button>
-
-  <div class="footer-tip">
-    <span>کلید میانبر سریع:</span>
-    <span class="kbd">Ctrl + Shift + Z</span>
+  <!-- Zoom Level Slider -->
+  <div class="slider-section">
+    <div class="slider-header">
+      <span class="slider-title">سطح زوم:</span>
+      <span id="zoom-badge" class="badge-val">200%</span>
+    </div>
+    <input type="range" id="zoom-slider" min="50" max="500" step="25" value="200">
   </div>
 
-  <!-- بارگذاری اسکریپت پاپ‌آپ -->
+  <!-- Box Color & Dimming -->
+  <div class="two-cols">
+    <div>
+      <span class="col-header">رنگ کادر:</span>
+      <div class="color-picker-box">
+        <button id="color-preview" class="color-preview-btn"></button>
+        <input type="color" id="color-input" value="#39FF14" style="display:none;">
+        <span id="hex-label" class="hex-code">#39FF14</span>
+      </div>
+    </div>
+    <div>
+      <div class="col-header">
+        <span>شفافیت پس‌زمینه:</span>
+        <span id="opacity-val" style="color:#d4d4d8;font-family:monospace;">50%</span>
+      </div>
+      <input type="range" id="opacity-slider" min="0" max="95" step="5" value="50" style="margin-top:6px;">
+    </div>
+  </div>
+
+  <!-- Shortcuts -->
+  <div class="shortcut-box">
+    <div class="shortcut-header">
+      <span class="slider-title">تنظیم کلید میانبر</span>
+      <span id="shortcut-display" class="shortcut-badge">Ctrl + Shift + Z</span>
+    </div>
+    <div class="modifiers-container">
+      <div class="mod-item" id="mod-ctrl">
+        <span>Ctrl</span>
+        <div class="mod-checkbox checked" id="chk-ctrl">✓</div>
+      </div>
+      <div class="mod-item" id="mod-shift">
+        <span>Shift</span>
+        <div class="mod-checkbox checked" id="chk-shift">✓</div>
+      </div>
+      <div class="mod-item" id="mod-alt">
+        <span>Alt</span>
+        <div class="mod-checkbox" id="chk-alt"></div>
+      </div>
+    </div>
+    <div class="key-select-row">
+      <span class="key-select-label">کلید میانبر فعال‌سازی:</span>
+      <select id="key-dropdown" class="key-dropdown">
+        <option value="Z">Z</option>
+        <option value="X">X</option>
+        <option value="C">C</option>
+        <option value="V">V</option>
+        <option value="A">A</option>
+        <option value="S">S</option>
+        <option value="F">F</option>
+        <option value="Q">Q</option>
+        <option value="E">E</option>
+        <option value="R">R</option>
+        <option value="B">B</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Lens Mode -->
+  <div class="lens-row">
+    <div class="lens-title">
+      <span style="color:#39FF14;">👁️</span>
+      <span>حالت ذره‌بین (Lens)</span>
+    </div>
+    <div class="mod-checkbox" id="chk-lens" style="cursor:pointer;"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-text" id="footer-text">
+    میانبر فعال: Ctrl + Shift + Z / Esc
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>`,
     },
     popupJs: {
       name: 'popup.js',
-      desc: 'Popup Controller script with auto-injection fallback',
+      desc: 'Popup Controller script with full UI sync and tab messaging',
       code: `// popup.js - کنترلر پنجره پاپ‌آپ افزونه Zoom Box Pro
-// سازگاری کامل با موزیلا فایرفاکس (Firefox) و کرومیوم (Chrome, Brave, Edge)
-
 document.addEventListener('DOMContentLoaded', async () => {
   const browserAPI = (typeof browser !== 'undefined' && browser.runtime) ? browser : (typeof chrome !== 'undefined' ? chrome : null);
 
   const btnDraw = document.getElementById('btn-draw');
-  const btnTogglePanel = document.getElementById('btn-toggle-panel');
+  const btnDrawText = document.getElementById('btn-draw-text');
   const btnReset = document.getElementById('btn-reset');
   const zoomSlider = document.getElementById('zoom-slider');
-  const zoomValue = document.getElementById('zoom-value');
-  const restrictedNotice = document.getElementById('restricted-notice');
+  const zoomBadge = document.getElementById('zoom-badge');
+  const presetBtns = document.querySelectorAll('.preset-btn');
+  const colorPreview = document.getElementById('color-preview');
+  const colorInput = document.getElementById('color-input');
+  const hexLabel = document.getElementById('hex-label');
+  const opacitySlider = document.getElementById('opacity-slider');
+  const opacityVal = document.getElementById('opacity-val');
+  const chkCtrl = document.getElementById('chk-ctrl');
+  const chkShift = document.getElementById('chk-shift');
+  const chkAlt = document.getElementById('chk-alt');
+  const keyDropdown = document.getElementById('key-dropdown');
+  const shortcutDisplay = document.getElementById('shortcut-display');
+  const footerText = document.getElementById('footer-text');
+  const chkLens = document.getElementById('chk-lens');
 
-  async function getActiveTab() {
-    if (!browserAPI || !browserAPI.tabs) return null;
-    try {
-      let tabs = [];
-      try {
-        tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-      } catch (e) {
-        tabs = await browserAPI.tabs.query({ active: true });
-      }
-      if (tabs && tabs.length > 0) return tabs[0];
-      const fallback = await browserAPI.tabs.query({ active: true, lastFocusedWindow: true });
-      return fallback && fallback[0] ? fallback[0] : null;
-    } catch (e) {
-      console.warn('tabs.query error:', e);
-      return null;
+  let state = {
+    zoomLevel: 200,
+    boxColor: '#39FF14',
+    opacity: 50,
+    shortcutCtrl: true,
+    shortcutShift: true,
+    shortcutAlt: false,
+    shortcutKey: 'Z',
+    lensMode: false
+  };
+
+  function updateShortcutUI() {
+    const parts = [];
+    if (state.shortcutCtrl) parts.push('Ctrl');
+    if (state.shortcutShift) parts.push('Shift');
+    if (state.shortcutAlt) parts.push('Alt');
+    parts.push(state.shortcutKey);
+    const text = parts.join(' + ');
+
+    if (shortcutDisplay) shortcutDisplay.textContent = text;
+    if (footerText) footerText.textContent = \`میانبر فعال: \${text} / Esc\`;
+
+    if (chkCtrl) {
+      chkCtrl.className = \`mod-checkbox \${state.shortcutCtrl ? 'checked' : ''}\`;
+      chkCtrl.textContent = state.shortcutCtrl ? '✓' : '';
     }
+    if (chkShift) {
+      chkShift.className = \`mod-checkbox \${state.shortcutShift ? 'checked' : ''}\`;
+      chkShift.textContent = state.shortcutShift ? '✓' : '';
+    }
+    if (chkAlt) {
+      chkAlt.className = \`mod-checkbox \${state.shortcutAlt ? 'checked' : ''}\`;
+      chkAlt.textContent = state.shortcutAlt ? '✓' : '';
+    }
+  }
+
+  function updatePresetsUI() {
+    presetBtns.forEach(btn => {
+      const val = parseInt(btn.getAttribute('data-val'), 10);
+      if (val === state.zoomLevel) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
   }
 
   try {
     if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
-      const data = await browserAPI.storage.sync.get({ zoomLevel: 200 });
-      if (data && data.zoomLevel) {
-        if (zoomSlider) zoomSlider.value = data.zoomLevel;
-        if (zoomValue) zoomValue.textContent = \`\${data.zoomLevel}%\`;
-      }
+      const data = await browserAPI.storage.sync.get(state);
+      if (data) state = { ...state, ...data };
     }
   } catch (e) {}
 
-  const activeTab = await getActiveTab();
-  if (activeTab && activeTab.url) {
-    const restrictedPrefixes = ['about:', 'chrome:', 'edge:', 'moz-extension:', 'chrome-extension:', 'view-source:', 'resource:'];
-    const isRestricted = restrictedPrefixes.some(p => activeTab.url.startsWith(p)) || activeTab.url.includes('addons.mozilla.org');
-    
-    if (isRestricted) {
-      if (restrictedNotice) restrictedNotice.style.display = 'block';
-      if (btnDraw) {
-        btnDraw.disabled = true;
-        btnDraw.style.opacity = '0.5';
-        btnDraw.style.cursor = 'not-allowed';
-      }
+  if (zoomSlider) zoomSlider.value = state.zoomLevel;
+  if (zoomBadge) zoomBadge.textContent = \`\${state.zoomLevel}%\`;
+  if (colorPreview) colorPreview.style.backgroundColor = state.boxColor;
+  if (colorInput) colorInput.value = state.boxColor;
+  if (hexLabel) hexLabel.textContent = state.boxColor;
+  if (opacitySlider) opacitySlider.value = state.opacity;
+  if (opacityVal) opacityVal.textContent = \`\${state.opacity}%\`;
+  if (keyDropdown) keyDropdown.value = state.shortcutKey;
+  if (chkLens) {
+    chkLens.className = \`mod-checkbox \${state.lensMode ? 'checked' : ''}\`;
+    chkLens.textContent = state.lensMode ? '✓' : '';
+  }
+  updateShortcutUI();
+  updatePresetsUI();
+
+  async function getActiveTab() {
+    if (!browserAPI || !browserAPI.tabs) return null;
+    try {
+      let tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+      if (tabs && tabs.length > 0) return tabs[0];
+      const fallback = await browserAPI.tabs.query({ active: true, lastFocusedWindow: true });
+      return fallback && fallback[0] ? fallback[0] : null;
+    } catch (e) {
+      return null;
     }
   }
 
   async function sendMessageToTab(message, autoClose = false) {
     const tab = await getActiveTab();
     if (!tab || !tab.id) return;
-
     try {
       await browserAPI.tabs.sendMessage(tab.id, message);
     } catch (err) {
@@ -1080,47 +1473,124 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         await new Promise(r => setTimeout(r, 120));
         await browserAPI.tabs.sendMessage(tab.id, message);
-      } catch (injErr) {
-        console.warn('Content script injection fallback:', injErr);
-      }
+      } catch (injErr) {}
     }
-
     if (autoClose) {
-      setTimeout(() => {
-        window.close();
-      }, 60);
+      setTimeout(() => window.close(), 60);
     }
+  }
+
+  async function saveSettings() {
+    try {
+      if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
+        await browserAPI.storage.sync.set(state);
+      }
+    } catch (e) {}
+    sendMessageToTab({ action: 'updateSettings', settings: state }, false);
   }
 
   if (btnDraw) {
     btnDraw.addEventListener('click', () => {
-      btnDraw.innerHTML = '<span>⏳</span><span>در حال آماده‌سازی...</span>';
+      if (btnDrawText) btnDrawText.textContent = 'در حال انتخاب...';
       sendMessageToTab({ action: 'startDrawingMode' }, true);
-    });
-  }
-
-  if (btnTogglePanel) {
-    btnTogglePanel.addEventListener('click', () => {
-      sendMessageToTab({ action: 'toggleExtensionUI' }, true);
-    });
-  }
-
-  if (zoomSlider) {
-    zoomSlider.addEventListener('input', async (e) => {
-      const level = parseInt(e.target.value, 10);
-      if (zoomValue) zoomValue.textContent = \`\${level}%\`;
-      try {
-        if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
-          await browserAPI.storage.sync.set({ zoomLevel: level });
-        }
-      } catch (err) {}
-      sendMessageToTab({ action: 'updateZoomLevel', zoomLevel: level }, false);
     });
   }
 
   if (btnReset) {
     btnReset.addEventListener('click', () => {
+      state.zoomLevel = 100;
+      if (zoomSlider) zoomSlider.value = 100;
+      if (zoomBadge) zoomBadge.textContent = '100%';
+      updatePresetsUI();
+      saveSettings();
       sendMessageToTab({ action: 'resetZoom' }, false);
+    });
+  }
+
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.getAttribute('data-val'), 10);
+      state.zoomLevel = val;
+      if (zoomSlider) zoomSlider.value = val;
+      if (zoomBadge) zoomBadge.textContent = \`\${val}%\`;
+      updatePresetsUI();
+      saveSettings();
+      sendMessageToTab({ action: 'updateZoomLevel', zoomLevel: val }, false);
+    });
+  });
+
+  if (zoomSlider) {
+    zoomSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.zoomLevel = val;
+      if (zoomBadge) zoomBadge.textContent = \`\${val}%\`;
+      updatePresetsUI();
+      saveSettings();
+      sendMessageToTab({ action: 'updateZoomLevel', zoomLevel: val }, false);
+    });
+  }
+
+  if (colorPreview && colorInput) {
+    colorPreview.addEventListener('click', () => colorInput.click());
+    colorInput.addEventListener('input', (e) => {
+      state.boxColor = e.target.value;
+      colorPreview.style.backgroundColor = state.boxColor;
+      if (hexLabel) hexLabel.textContent = state.boxColor;
+      saveSettings();
+    });
+  }
+
+  if (opacitySlider) {
+    opacitySlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.opacity = val;
+      if (opacityVal) opacityVal.textContent = \`\${val}%\`;
+      saveSettings();
+    });
+  }
+
+  const modCtrl = document.getElementById('mod-ctrl');
+  if (modCtrl) {
+    modCtrl.addEventListener('click', () => {
+      state.shortcutCtrl = !state.shortcutCtrl;
+      updateShortcutUI();
+      saveSettings();
+    });
+  }
+
+  const modShift = document.getElementById('mod-shift');
+  if (modShift) {
+    modShift.addEventListener('click', () => {
+      state.shortcutShift = !state.shortcutShift;
+      updateShortcutUI();
+      saveSettings();
+    });
+  }
+
+  const modAlt = document.getElementById('mod-alt');
+  if (modAlt) {
+    modAlt.addEventListener('click', () => {
+      state.shortcutAlt = !state.shortcutAlt;
+      updateShortcutUI();
+      saveSettings();
+    });
+  }
+
+  if (keyDropdown) {
+    keyDropdown.addEventListener('change', (e) => {
+      state.shortcutKey = e.target.value;
+      updateShortcutUI();
+      saveSettings();
+    });
+  }
+
+  const lensRow = document.querySelector('.lens-row');
+  if (lensRow && chkLens) {
+    lensRow.addEventListener('click', () => {
+      state.lensMode = !state.lensMode;
+      chkLens.className = \`mod-checkbox \${state.lensMode ? 'checked' : ''}\`;
+      chkLens.textContent = state.lensMode ? '✓' : '';
+      saveSettings();
     });
   }
 });`,
