@@ -12,20 +12,29 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   const files = {
     manifest: {
       name: 'manifest.json',
-      desc: 'Manifest V3 Configuration & Permissions',
+      desc: 'Cross-Browser Manifest V3 (Chrome & Firefox)',
       code: `{
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "8.0.0",
-  "description": "افزونه زوم حرفه‌ای با پنل تنظیمات شناور و بدون نیاز به رفرش",
+  "version": "8.3.0",
+  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با کشیدن کادر و انیمیشن روان - سازگار با فایرفاکس و کروم بدون نیاز به رفرش",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "zoomboxpro@firefox.extension",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": [
     "storage",
     "tabs",
     "activeTab",
     "scripting"
   ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
-    "default_title": "کلیک کنید تا پنل تنظیمات باز شود",
+    "default_title": "Zoom Box Pro - کلیک برای باز شدن پنل زوم",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -33,13 +42,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"]
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "icons": {
@@ -512,10 +522,12 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     },
     background: {
       name: 'background.js',
-      desc: 'Service Worker: Context Action & Multi-Tab Injection',
-      code: `// background.js - مدیریت پیام‌ها و باز کردن پنل کنترل در تب‌ها
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.set({
+      desc: 'Cross-Browser Background Script: Auto Injection & Tab Control',
+      code: `// background.js - اسکریپت پس‌زمینه چندمرورگره سازگار با Firefox و Chrome
+const ext = typeof browser !== 'undefined' ? browser : chrome;
+
+ext.runtime.onInstalled.addListener(() => {
+  ext.storage.sync.set({
     zoomLevel: 200,
     boxColor: '#39FF14',
     opacity: 50,
@@ -527,21 +539,40 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-chrome.action.onClicked.addListener((tab) => {
-  if (!tab.id) return;
-  chrome.tabs.sendMessage(tab.id, { action: 'toggleExtensionUI' }, (response) => {
-    if (chrome.runtime.lastError) {
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      }).then(() => {
-        setTimeout(() => {
-          chrome.tabs.sendMessage(tab.id, { action: 'toggleExtensionUI' });
-        }, 150);
-      }).catch(err => console.error("Error executing script:", err));
+async function sendOrInject(tabId) {
+  if (!tabId) return;
+  try {
+    await new Promise((resolve, reject) => {
+      ext.tabs.sendMessage(tabId, { action: 'toggleExtensionUI' }, (response) => {
+        if (ext.runtime.lastError || !response) reject(ext.runtime.lastError);
+        else resolve(response);
+      });
+    });
+  } catch (err) {
+    try {
+      if (ext.scripting && ext.scripting.executeScript) {
+        await ext.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['content.js']
+        });
+      } else if (ext.tabs && ext.tabs.executeScript) {
+        await new Promise(r => ext.tabs.executeScript(tabId, { file: 'content.js' }, r));
+      }
+      setTimeout(() => {
+        ext.tabs.sendMessage(tabId, { action: 'toggleExtensionUI' });
+      }, 100);
+    } catch (e) {
+      console.warn(e);
     }
+  }
+}
+
+const actionApi = ext.action || ext.browserAction;
+if (actionApi && actionApi.onClicked) {
+  actionApi.onClicked.addListener((tab) => {
+    if (tab && tab.id) sendOrInject(tab.id);
   });
-});`,
+}`,
     },
     readme: {
       name: 'README.md',

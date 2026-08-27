@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "8.2.0",
-  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با کشیدن کادر و انیمیشن روان - سازگار با کروم و فایرفاکس",
+  "version": "8.3.0",
+  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با کشیدن کادر و انیمیشن روان - سازگار کامل با فایرفاکس و کروم بدون نیاز به رفرش",
   "browser_specific_settings": {
     "gecko": {
       "id": "zoomboxpro@firefox.extension",
@@ -15,6 +15,9 @@
     "activeTab",
     "scripting"
   ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_title": "Zoom Box Pro - کلیک برای باز شدن پنل زوم",
     "default_icon": {
@@ -24,14 +27,14 @@
     }
   },
   "background": {
-    "service_worker": "background.js",
     "scripts": ["background.js"]
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "icons": {
