@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileCode, Download, Copy, Check, Chrome, ShieldCheck, FolderCheck, Flame, Layers } from 'lucide-react';
+import { FileCode, Download, Copy, Check, Chrome, ShieldCheck, FolderCheck, Flame } from 'lucide-react';
 import JSZip from 'jszip';
 
 interface Props {
@@ -10,7 +10,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   const [selectedFile, setSelectedFile] = useState<'manifest' | 'popupHtml' | 'popupJs' | 'content' | 'background' | 'readme'>('manifest');
   const [copied, setCopied] = useState<boolean>(false);
   const [downloading, setDownloading] = useState<boolean>(false);
-  const [activeGuideTab, setActiveGuideTab] = useState<'chrome' | 'firefox'>('firefox');
+  const [activeGuideTab, setActiveGuideTab] = useState<'firefox' | 'chrome'>('firefox');
 
   const files = {
     manifest: {
@@ -19,8 +19,8 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       code: `{
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "8.4.0",
-  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با کشیدن کادر و انیمیشن روان - سازگار با فایرفاکس، کروم، بریو و اج بدون نیاز به رفرش",
+  "version": "8.5.0",
+  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با کشیدن کادر و انیمیشن روان - سازگار کامل با فایرفاکس، کروم، بریو و اج بدون نیاز به رفرش",
   "browser_specific_settings": {
     "gecko": {
       "id": "zoomboxpro@firefox.extension",
@@ -45,8 +45,24 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
   },
   "background": {
-    "service_worker": "background.js",
-    "scripts": ["background.js"]
+    "scripts": ["background.js"],
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "toggle-draw": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Z",
+        "mac": "Command+Shift+Z"
+      },
+      "description": "شروع انتخاب و رسم کادر زوم"
+    },
+    "reset-zoom": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+X",
+        "mac": "Command+Shift+X"
+      },
+      "description": "بازنشانی زوم صفحه"
+    }
   },
   "content_scripts": [
     {
@@ -73,30 +89,33 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zoom Box Pro</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { width: 300px; background-color: #09090b; color: #f4f4f5; padding: 16px; user-select: none; }
     .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #27272a; padding-bottom: 12px; margin-bottom: 14px; }
     .header-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #39FF14; }
-    .badge { font-size: 10px; background: #27272a; color: #a1a1aa; padding: 2px 6px; border-radius: 4px; }
+    .badge { font-size: 10px; background: #27272a; color: #a1a1aa; padding: 2px 6px; border-radius: 4px; direction: ltr; }
     .btn { width: 100%; padding: 10px 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; margin-bottom: 8px; }
     .btn-primary { background: #39FF14; color: #09090b; box-shadow: 0 0 15px rgba(57, 255, 20, 0.25); }
-    .btn-primary:hover { background: #2ecc71; transform: translateY(-1px); }
+    .btn-primary:hover { background: #2ecc71; transform: translateY(-1px); box-shadow: 0 0 20px rgba(57, 255, 20, 0.4); }
     .btn-secondary { background: #18181b; color: #e4e4e7; border: 1px solid #27272a; }
-    .btn-secondary:hover { background: #27272a; color: #fff; }
+    .btn-secondary:hover { background: #27272a; color: #ffffff; }
     .btn-reset { background: #18181b; color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .btn-reset:hover { background: rgba(244, 63, 94, 0.15); border-color: #f43f5e; }
     .section { background: #18181b; border: 1px solid #27272a; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     .slider-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #a1a1aa; margin-bottom: 8px; }
     .slider-val { font-weight: 700; color: #39FF14; font-size: 13px; }
-    input[type="range"] { width: 100%; accent-color: #39FF14; cursor: pointer; }
+    input[type="range"] { width: 100%; accent-color: #39FF14; cursor: pointer; height: 4px; background: #27272a; border-radius: 2px; }
     .footer-tip { font-size: 11px; color: #71717a; display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid #27272a; }
-    .kbd { background: #27272a; color: #e4e4e7; padding: 2px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #3f3f46; }
+    .kbd { background: #27272a; color: #e4e4e7; padding: 2px 6px; border-radius: 4px; font-size: 10px; direction: ltr; border: 1px solid #3f3f46; }
+    .msg-box { display: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; margin-bottom: 10px; background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); line-height: 1.4; }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="header-title"><span>🔍</span><span>Zoom Box Pro</span></div>
-    <span class="badge">v8.4.0</span>
+    <span class="badge">v8.5.0</span>
   </div>
+  <div id="restricted-notice" class="msg-box">⚠️ این صفحه سیستمی مرورگر است. لطفاً افزونه را روی یک وب‌سایت عادی (مانند گوگل یا ویکی‌پدیا) اجرا نمایید.</div>
   <button id="btn-draw" class="btn btn-primary"><span>✏️</span><span>شروع انتخاب و رسم کادر زوم</span></button>
   <button id="btn-toggle-panel" class="btn btn-secondary"><span>📌</span><span>نمایش / پنهان کردن پنل در صفحه</span></button>
   <div class="section">
@@ -111,48 +130,96 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     },
     popupJs: {
       name: 'popup.js',
-      desc: 'Popup Controller: Tab Messaging & Instant Script Injection',
-      code: `// popup.js - مدیریت پاپ‌آپ افزونه در کروم و فایرفاکس
-const extApi = typeof browser !== 'undefined' ? browser : chrome;
-
+      desc: 'Popup Controller: Dual Browser tabs.query & script injection fallback',
+      code: `// popup.js - کنترلر پاپ‌آپ چندمرورگره (Firefox و Chrome)
 document.addEventListener('DOMContentLoaded', async () => {
   const btnDraw = document.getElementById('btn-draw');
   const btnTogglePanel = document.getElementById('btn-toggle-panel');
   const btnReset = document.getElementById('btn-reset');
   const zoomSlider = document.getElementById('zoom-slider');
   const zoomValue = document.getElementById('zoom-value');
+  const restrictedNotice = document.getElementById('restricted-notice');
 
   async function getActiveTab() {
+    try {
+      if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.query) {
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+        if (tabs && tabs[0]) return tabs[0];
+        const tabsFallback = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        if (tabsFallback && tabsFallback[0]) return tabsFallback[0];
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+
     return new Promise((resolve) => {
-      extApi.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        resolve(tabs && tabs[0] ? tabs[0] : null);
-      });
+      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs[0]) resolve(tabs[0]);
+          else chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs2) => resolve(tabs2 && tabs2[0] ? tabs2[0] : null));
+        });
+      } else {
+        resolve(null);
+      }
     });
+  }
+
+  const activeTab = await getActiveTab();
+  if (activeTab && activeTab.url) {
+    const isRestricted = ['about:', 'chrome:', 'edge:', 'moz-extension:', 'chrome-extension:'].some(p => activeTab.url.startsWith(p)) || activeTab.url.includes('addons.mozilla.org');
+    if (isRestricted) {
+      if (restrictedNotice) restrictedNotice.style.display = 'block';
+      btnDraw.disabled = true;
+      btnDraw.style.opacity = '0.5';
+    }
   }
 
   async function sendMessageToTab(message, autoClose = false) {
     const tab = await getActiveTab();
     if (!tab || !tab.id) return;
 
-    extApi.tabs.sendMessage(tab.id, message, (response) => {
-      const err = extApi.runtime.lastError;
-      if (err || !response) {
-        // تزریق آنی اسکریپت اگر تب از قبل باز بوده است
-        if (extApi.scripting && extApi.scripting.executeScript) {
-          extApi.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).then(() => {
-            setTimeout(() => {
-              extApi.tabs.sendMessage(tab.id, message);
-              if (autoClose) window.close();
-            }, 100);
+    let sent = false;
+    if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.sendMessage) {
+      try {
+        await browser.tabs.sendMessage(tab.id, message);
+        sent = true;
+      } catch (err) {}
+    }
+
+    if (!sent && typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.sendMessage) {
+      try {
+        await new Promise((resolve, reject) => {
+          chrome.tabs.sendMessage(tab.id, message, (res) => {
+            if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+            else resolve(res);
           });
+        });
+        sent = true;
+      } catch (err) {}
+    }
+
+    if (!sent) {
+      try {
+        const api = typeof browser !== 'undefined' ? browser : chrome;
+        if (api.scripting && api.scripting.executeScript) {
+          await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        } else if (api.tabs && api.tabs.executeScript) {
+          await new Promise(r => api.tabs.executeScript(tab.id, { file: 'content.js' }, r));
         }
-      } else {
-        if (autoClose) window.close();
-      }
-    });
+        await new Promise(r => setTimeout(r, 120));
+        if (typeof browser !== 'undefined' && browser.tabs && browser.tabs.sendMessage) {
+          await browser.tabs.sendMessage(tab.id, message);
+        } else if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.sendMessage) {
+          chrome.tabs.sendMessage(tab.id, message, () => {});
+        }
+      } catch (e) {}
+    }
+
+    if (autoClose) window.close();
   }
 
   btnDraw.addEventListener('click', () => {
+    btnDraw.innerHTML = '<span>⏳</span><span>در حال فعال‌سازی...</span>';
     sendMessageToTab({ action: 'startDrawingMode' }, true);
   });
 
@@ -163,9 +230,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   zoomSlider.addEventListener('input', (e) => {
     const level = parseInt(e.target.value, 10);
     zoomValue.textContent = \`\${level}%\`;
-    if (extApi.storage && extApi.storage.sync) {
-      extApi.storage.sync.set({ zoomLevel: level });
-    }
     sendMessageToTab({ action: 'updateZoomLevel', zoomLevel: level }, false);
   });
 
@@ -176,19 +240,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
     content: {
       name: 'content.js',
-      desc: 'Cross-Browser Content Script: Full-Page Zoom & Smooth Gradual Zoom-Out',
+      desc: 'Cross-Browser Content Script: Root Container Attached to documentElement, Full-Page Zoom & Smooth Gradual Zoom-Out',
       code: `/**
  * Zoom Box Pro - Content Script (سازگار کامل با تمامی مرورگرها)
- * نسخه 8.4.0
+ * نسخه 8.5.0
  */
 (function () {
   'use strict';
-  if (window.__ZOOM_BOX_PRO_ACTIVE__) return;
-  window.__ZOOM_BOX_PRO_ACTIVE__ = true;
+  if (window.__ZOOM_BOX_PRO_INSTANCE__) return;
 
   const extApi = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
 
-  class CrossBrowserZoomExtension {
+  class ZoomBoxProController {
     constructor() {
       this.isDrawingMode = false;
       this.isDragging = false;
@@ -197,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.isZoomed = false;
       this.lastOriginX = window.innerWidth / 2;
       this.lastOriginY = window.innerHeight / 2;
-      this.settings = { zoomLevel: 200, boxColor: '#39FF14', opacity: 50, shortcutKey: 'Z' };
+      this.settings = { zoomLevel: 200, shortcutKey: 'Z' };
       this.init();
     }
 
@@ -212,23 +275,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       const style = document.createElement('style');
       style.id = 'zbp-global-styles';
       style.textContent = \`
-        html, body { transform-origin: 0 0; }
-        #zbp-overlay { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483640 !important; background: rgba(0, 0, 0, 0.45) !important; cursor: crosshair !important; display: none; }
+        body { transform-origin: 0 0; }
+        #zbp-root-host { position: fixed !important; top: 0 !important; left: 0 !important; width: 0 !important; height: 0 !important; z-index: 2147483640 !important; pointer-events: none !important; }
+        #zbp-overlay { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483641 !important; background: rgba(0, 0, 0, 0.45) !important; cursor: crosshair !important; display: none; user-select: none !important; pointer-events: auto !important; }
+        #zbp-overlay-tip { position: absolute !important; top: 20px !important; left: 50% !important; transform: translateX(-50%) !important; background: #09090b !important; color: #39FF14 !important; border: 1px solid #39FF14 !important; padding: 8px 18px !important; border-radius: 9999px !important; font-family: sans-serif !important; font-size: 13px !important; font-weight: bold !important; box-shadow: 0 0 20px rgba(57, 255, 20, 0.4) !important; pointer-events: none !important; direction: rtl !important; }
         #zbp-selection-box { position: fixed !important; z-index: 2147483642 !important; display: none; pointer-events: none !important; border: 3px solid #39FF14 !important; background: rgba(57, 255, 20, 0.2) !important; box-shadow: 0 0 25px rgba(57, 255, 20, 0.7) !important; }
-        #zbp-floating-panel { position: fixed !important; top: 25px !important; right: 25px !important; width: 320px !important; background: #09090b !important; color: #f4f4f5 !important; border: 2px solid #39FF14 !important; border-radius: 16px !important; padding: 16px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 25px rgba(57,255,20,0.3) !important; z-index: 2147483646 !important; direction: rtl !important; display: none; }
-        #zbp-status-bar { position: fixed !important; bottom: 24px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2147483647 !important; background: #09090b !important; border: 2px solid #39FF14 !important; padding: 8px 18px !important; border-radius: 9999px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important; display: none; align-items: center !important; gap: 12px !important; direction: rtl !important; }
+        #zbp-floating-panel { position: fixed !important; top: 24px !important; right: 24px !important; width: 320px !important; background: #09090b !important; color: #f4f4f5 !important; border: 2px solid #39FF14 !important; border-radius: 16px !important; padding: 16px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.85) !important; z-index: 2147483646 !important; direction: rtl !important; display: none; pointer-events: auto !important; }
+        #zbp-status-bar { position: fixed !important; bottom: 24px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2147483647 !important; background: #09090b !important; border: 2px solid #39FF14 !important; padding: 8px 18px !important; border-radius: 9999px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.85) !important; display: none; align-items: center !important; gap: 12px !important; direction: rtl !important; pointer-events: auto !important; }
       \`;
       (document.head || document.documentElement).appendChild(style);
     }
 
     buildDOM() {
+      this.rootContainer = document.createElement('div');
+      this.rootContainer.id = 'zbp-root-host';
+
       this.overlay = document.createElement('div');
       this.overlay.id = 'zbp-overlay';
-      (document.body || document.documentElement).appendChild(this.overlay);
+      this.overlay.innerHTML = '<div id="zbp-overlay-tip">🖱️ کادر موردنظر را با موس بکشید یا روی نقطه دلخواه کلیک کنید (Esc برای لغو)</div>';
+      this.rootContainer.appendChild(this.overlay);
 
       this.selectionBox = document.createElement('div');
       this.selectionBox.id = 'zbp-selection-box';
-      (document.body || document.documentElement).appendChild(this.selectionBox);
+      this.rootContainer.appendChild(this.selectionBox);
 
       this.floatingPanel = document.createElement('div');
       this.floatingPanel.id = 'zbp-floating-panel';
@@ -239,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <button id="zbp-draw-btn" style="width:100%;padding:10px;background:#39FF14;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-bottom:12px;">✏️ شروع رسم کادر زوم</button>
       \`;
-      (document.body || document.documentElement).appendChild(this.floatingPanel);
+      this.rootContainer.appendChild(this.floatingPanel);
 
       this.statusBar = document.createElement('div');
       this.statusBar.id = 'zbp-status-bar';
@@ -247,17 +316,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         <span style="color:#39FF14;font-weight:bold;">🔎 زوم فعال</span>
         <button id="zbp-reset" style="background:#39FF14;color:#000;border:none;border-radius:9999px;padding:6px 14px;font-weight:bold;cursor:pointer;">بازگشت نرم</button>
       \`;
-      (document.body || document.documentElement).appendChild(this.statusBar);
+      this.rootContainer.appendChild(this.statusBar);
+
+      (document.documentElement || document.body).appendChild(this.rootContainer);
     }
 
     bindListeners() {
-      if (extApi && extApi.runtime && extApi.runtime.onMessage) {
-        extApi.runtime.onMessage.addListener((req, sender, sendResponse) => {
-          if (req.action === 'toggleExtensionUI') this.togglePanel();
-          if (req.action === 'startDrawingMode') this.startDrawing();
-          if (req.action === 'resetZoom') this.zoomOut();
-          if (sendResponse) sendResponse({ success: true });
-        });
+      const msgHandler = (req, sender, sendResponse) => {
+        if (req.action === 'toggleExtensionUI') this.togglePanel();
+        if (req.action === 'startDrawingMode') this.startDrawing();
+        if (req.action === 'resetZoom') this.zoomOut();
+        if (sendResponse) sendResponse({ success: true });
+        return false;
+      };
+
+      if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
+        browser.runtime.onMessage.addListener(msgHandler);
+      } else if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+        chrome.runtime.onMessage.addListener(msgHandler);
       }
 
       window.addEventListener('keydown', (e) => {
@@ -267,51 +343,132 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (e.key === 'Escape') {
           this.zoomOut();
         }
+      }, true);
+
+      this.overlay.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        this.isDragging = true;
+        this.startX = e.clientX;
+        this.startY = e.clientY;
+        this.selectionBox.style.display = 'block';
+        this.selectionBox.style.left = \`\${this.startX}px\`;
+        this.selectionBox.style.top = \`\${this.startY}px\`;
+        this.selectionBox.style.width = '0px';
+        this.selectionBox.style.height = '0px';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!this.isDragging || !this.isDrawingMode) return;
+        const currentX = Math.max(0, Math.min(window.innerWidth, e.clientX));
+        const currentY = Math.max(0, Math.min(window.innerHeight, e.clientY));
+        const left = Math.min(currentX, this.startX);
+        const top = Math.min(currentY, this.startY);
+        const width = Math.abs(currentX - this.startX);
+        const height = Math.abs(currentY - this.startY);
+        this.selectionBox.style.left = \`\${left}px\`;
+        this.selectionBox.style.top = \`\${top}px\`;
+        this.selectionBox.style.width = \`\${width}px\`;
+        this.selectionBox.style.height = \`\${height}px\`;
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (!this.isDragging || !this.isDrawingMode) return;
+        this.isDragging = false;
+        const rect = this.selectionBox.getBoundingClientRect();
+        this.selectionBox.style.display = 'none';
+        this.cancelDrawing();
+        if (rect.width >= 15 && rect.height >= 15) {
+          this.applyFullPageZoom(rect);
+        } else {
+          this.applyFullPageZoom({ left: this.startX - 60, top: this.startY - 60, width: 120, height: 120 });
+        }
       });
     }
 
     startDrawing() {
       this.isDrawingMode = true;
-      this.overlay.style.display = 'block';
+      if (this.overlay) this.overlay.style.display = 'block';
+    }
+
+    cancelDrawing() {
+      this.isDrawingMode = false;
+      this.isDragging = false;
+      if (this.overlay) this.overlay.style.display = 'none';
+      if (this.selectionBox) this.selectionBox.style.display = 'none';
     }
 
     togglePanel() {
       this.floatingPanel.style.display = this.floatingPanel.style.display === 'block' ? 'none' : 'block';
     }
 
+    applyFullPageZoom(rect) {
+      this.isZoomed = true;
+      const scale = this.settings.zoomLevel / 100;
+      const scrollX = window.scrollX || window.pageXOffset || 0;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      this.lastOriginX = rect.left + rect.width / 2 + scrollX;
+      this.lastOriginY = rect.top + rect.height / 2 + scrollY;
+
+      const target = document.body || document.documentElement;
+      target.style.transition = 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1)';
+      target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
+      target.style.transform = \`scale(\${scale})\`;
+      if (this.statusBar) this.statusBar.style.display = 'flex';
+    }
+
     zoomOut() {
       this.isZoomed = false;
-      this.overlay.style.display = 'none';
+      this.cancelDrawing();
       const target = document.body || document.documentElement;
       target.style.transition = 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1)';
       target.style.transform = 'scale(1)';
-      this.statusBar.style.display = 'none';
+      if (this.statusBar) this.statusBar.style.display = 'none';
+      setTimeout(() => { if (!this.isZoomed) { target.style.transform = 'none'; target.style.transformOrigin = 'initial'; } }, 700);
     }
   }
 
-  new CrossBrowserZoomExtension();
+  window.__ZOOM_BOX_PRO_INSTANCE__ = new ZoomBoxProController();
 })();`,
     },
     background: {
       name: 'background.js',
       desc: 'Cross-Browser Service Worker & Background Manager',
       code: `// background.js - اسکریپت پس‌زمینه چندمرورگره
-const ext = typeof browser !== 'undefined' ? browser : chrome;
+const extApi = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
 
-ext.runtime.onInstalled.addListener(() => {
-  ext.storage.sync.set({
-    zoomLevel: 200,
-    boxColor: '#39FF14',
-    opacity: 50,
-    shortcutKey: 'Z',
-    extensionEnabled: true
+if (extApi && extApi.runtime && extApi.runtime.onInstalled) {
+  extApi.runtime.onInstalled.addListener(() => {
+    try {
+      if (extApi.storage && extApi.storage.sync) {
+        extApi.storage.sync.set({ zoomLevel: 200, shortcutKey: 'Z', extensionEnabled: true });
+      }
+    } catch (e) {}
   });
-});`,
+}
+
+if (extApi && extApi.commands && extApi.commands.onCommand) {
+  extApi.commands.onCommand.addListener(async (command) => {
+    try {
+      const queryApi = (typeof browser !== 'undefined' && browser.tabs) ? browser.tabs : chrome.tabs;
+      const tabs = await new Promise(r => queryApi.query({ active: true, currentWindow: true }, r));
+      const activeTab = tabs && tabs[0];
+      if (!activeTab || !activeTab.id) return;
+
+      if (command === 'toggle-draw') {
+        if (typeof browser !== 'undefined') browser.tabs.sendMessage(activeTab.id, { action: 'startDrawingMode' }).catch(() => {});
+        else chrome.tabs.sendMessage(activeTab.id, { action: 'startDrawingMode' }, () => {});
+      } else if (command === 'reset-zoom') {
+        if (typeof browser !== 'undefined') browser.tabs.sendMessage(activeTab.id, { action: 'resetZoom' }).catch(() => {});
+        else chrome.tabs.sendMessage(activeTab.id, { action: 'resetZoom' }, () => {});
+      }
+    } catch (err) {}
+  });
+}`,
     },
     readme: {
       name: 'README.md',
       desc: 'Extension Documentation & Multi-Browser Installation Guide',
-      code: `# Zoom Box Pro (نسخه 8.4.0)
+      code: `# Zoom Box Pro (نسخه 8.5.0)
 افزونه زوم تمام‌صفحه با کادر موس - سازگار با Mozilla Firefox و Google Chrome
 
 ## نصب در فایرفاکس (Firefox)
@@ -349,7 +506,6 @@ ext.runtime.onInstalled.addListener(() => {
 
         const iconsFolder = folder.folder('icons');
         if (iconsFolder) {
-          // ایجاد فایل آیکون پیش‌فرض بر پایه Canvas
           const canvas = document.createElement('canvas');
           canvas.width = 128;
           canvas.height = 128;
@@ -379,7 +535,7 @@ ext.runtime.onInstalled.addListener(() => {
       const url = URL.createObjectURL(zipContent);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'zoom-box-pro-v8.4.0.zip';
+      a.download = 'zoom-box-pro-v8.5.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -403,12 +559,12 @@ ext.runtime.onInstalled.addListener(() => {
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 {lang === 'fa' 
-                  ? (activeGuideTab === 'firefox' ? 'راهنمای نصب در موزیلا فایرفاکس (Firefox)' : 'راهنمای نصب در کروم / بریو / اج')
+                  ? (activeGuideTab === 'firefox' ? 'راهنمای تست و نصب در موزیلا فایرفاکس (Firefox)' : 'راهنمای نصب در کروم / بریو / اج')
                   : (activeGuideTab === 'firefox' ? 'Mozilla Firefox Installation Guide' : 'Chrome / Brave / Edge Installation Guide')}
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
                 {lang === 'fa' 
-                  ? 'پکیج افزونه شامل منوی پاپ‌آپ، زوم تمام‌صفحه و انیمیشن روان بدون نیاز به رفرش'
+                  ? 'پکیج افزونه شامل منوی پاپ‌آپ، زوم تمام‌صفحه، کلیک تک‌نقطه‌ای و انیمیشن روان'
                   : 'Ready-to-use cross-browser extension with popup menu, full-page scale and zero refresh.'}
               </p>
             </div>
@@ -420,7 +576,7 @@ ext.runtime.onInstalled.addListener(() => {
             className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#39FF14] text-black font-bold text-sm shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:bg-[#2ecc71] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
           >
             <Download className="w-4 h-4" />
-            <span>{downloading ? (lang === 'fa' ? 'در حال ایجاد فایل زیپ...' : 'Zipping...') : (lang === 'fa' ? 'دانلود پکیج ZIP افزونه' : 'Download Extension ZIP')}</span>
+            <span>{downloading ? (lang === 'fa' ? 'در حال ایجاد فایل زیپ...' : 'Zipping...') : (lang === 'fa' ? 'دانلود پکیج ZIP افزونه (v8.5.0)' : 'Download Extension ZIP (v8.5.0)')}</span>
           </button>
         </div>
 
@@ -460,7 +616,7 @@ ext.runtime.onInstalled.addListener(() => {
               </div>
               <div className="text-sm font-semibold text-white">ورود به بخش Debugging</div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                در نوار آدرس فایرفاکس وارد کنید: <code className="bg-zinc-900 px-1 py-0.5 rounded text-orange-300 font-mono">about:debugging#/runtime/this-firefox</code>
+                در آدرس‌بار فایرفاکس وارد کنید: <code className="bg-zinc-900 px-1 py-0.5 rounded text-orange-300 font-mono">about:debugging#/runtime/this-firefox</code>
               </p>
             </div>
 
@@ -480,9 +636,9 @@ ext.runtime.onInstalled.addListener(() => {
                 <span className="text-orange-400 font-bold">مرحله ۳</span>
                 <FolderCheck className="w-4 h-4 text-zinc-500" />
               </div>
-              <div className="text-sm font-semibold text-white">تست روی هر سایت دلخواه</div>
+              <div className="text-sm font-semibold text-white">تست روی یک سایت عادی</div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                وارد سایتی مثل google.com شوید، روی آیکون پاپ‌آپ افزونه کلیک کرده یا <code className="bg-zinc-900 px-1 py-0.5 rounded text-sky-400 font-mono">Ctrl+Shift+Z</code> بزنید.
+                روی سایتی مثل <code className="bg-zinc-900 px-1 py-0.5 rounded text-sky-400 font-mono">google.com</code> تست کنید (فایرفاکس اجرای اسکریپت در صفحات سیستمی خود را مسدود می‌کند).
               </p>
             </div>
           </div>
@@ -566,7 +722,7 @@ ext.runtime.onInstalled.addListener(() => {
         {/* File Description */}
         <div className="bg-zinc-900/40 px-5 py-2 text-[11px] font-mono text-zinc-400 border-b border-zinc-800/60 flex items-center justify-between">
           <span>{files[selectedFile].desc}</span>
-          <span className="text-zinc-500 text-[10px]">Cross-Browser Manifest V3</span>
+          <span className="text-zinc-500 text-[10px]">Cross-Browser Manifest V3 (v8.5.0)</span>
         </div>
 
         {/* Code Content */}
