@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "8.5.0",
-  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با کشیدن کادر و انیمیشن روان - سازگار کامل با فایرفاکس، کروم، بریو و اج با webextension-polyfill",
+  "version": "8.6.0",
+  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با رسم کادر انتخابی و انیمیشن روان - سازگار کامل با فایرفاکس، کروم، بریو و اج",
   "browser_specific_settings": {
     "gecko": {
       "id": "zoomboxpro@firefox.extension",
@@ -27,8 +27,7 @@
     }
   },
   "background": {
-    "scripts": ["browser-polyfill.min.js", "background.js"],
-    "service_worker": "background.js"
+    "scripts": ["background.js"]
   },
   "commands": {
     "toggle-draw": {
@@ -49,7 +48,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["browser-polyfill.min.js", "content.js"],
+      "js": ["content.js"],
       "run_at": "document_end",
       "all_frames": false
     }

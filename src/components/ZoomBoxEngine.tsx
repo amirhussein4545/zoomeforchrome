@@ -20,6 +20,13 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
   const [isActive, setIsActive] = useState<boolean>(false);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [selection, setSelection] = useState<SelectionRect | null>(null);
+  const [lockedBox, setLockedBox] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    fading: boolean;
+  } | null>(null);
   const [zoomedRegion, setZoomedRegion] = useState<ZoomedRegion | null>(null);
   const [lastOrigin, setLastOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isExitingZoom, setIsExitingZoom] = useState<boolean>(false);
@@ -152,16 +159,26 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
     if (!isActive || !isDrawing || !selection) return;
 
     if (selection.width > 25 && selection.height > 25) {
+      const currentSel = { ...selection };
       const scale = settings.zoomLevel / 100;
-      const originX = selection.left + selection.width / 2 + window.scrollX;
-      const originY = selection.top + selection.height / 2 + window.scrollY;
+      const originX = currentSel.left + currentSel.width / 2 + window.scrollX;
+      const originY = currentSel.top + currentSel.height / 2 + window.scrollY;
+
+      // Lock the selection box for a smooth visual confirmation transition
+      setLockedBox({
+        left: currentSel.left,
+        top: currentSel.top,
+        width: currentSel.width,
+        height: currentSel.height,
+        fading: false,
+      });
 
       setLastOrigin({ x: originX, y: originY });
       setZoomedRegion({
-        left: selection.left,
-        top: selection.top,
-        width: selection.width,
-        height: selection.height,
+        left: currentSel.left,
+        top: currentSel.top,
+        width: currentSel.width,
+        height: currentSel.height,
         scale,
         originX,
         originY,
@@ -174,6 +191,15 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
           : `Full-page zoom ${settings.zoomLevel}% applied to selected region!`,
         'success'
       );
+
+      // Trigger smooth fade-out / expansion of the focus box
+      setTimeout(() => {
+        setLockedBox((prev) => prev ? { ...prev, fading: true } : null);
+      }, 80);
+
+      setTimeout(() => {
+        setLockedBox(null);
+      }, 420);
     }
 
     setSelection(null);
@@ -239,30 +265,84 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
         />
       )}
 
-      {/* Real-time Drawing Selection Rectangle */}
+      {/* Real-time Drawing Selection Rectangle with Smooth Appearance & Precision Reticle */}
       {selection && selection.width > 2 && (
         <div
           id="zoom-selection-box"
-          className="fixed z-[999985] pointer-events-none transition-all duration-75 ease-out shadow-2xl"
+          className="fixed z-[999985] pointer-events-none transition-[left,top,width,height] duration-75 ease-out rounded-sm animate-in fade-in zoom-in-[0.97] duration-150"
           style={{
             left: `${selection.left}px`,
             top: `${selection.top}px`,
             width: `${selection.width}px`,
             height: `${selection.height}px`,
             borderColor: settings.boxColor,
-            borderWidth: '3px',
-            borderStyle: 'solid',
-            backgroundColor: hexToRgba(settings.boxColor, 0.22),
-            boxShadow: `0 0 25px ${hexToRgba(settings.boxColor, 0.75)}`,
+            borderWidth: '2px',
+            borderStyle: 'dashed',
+            backgroundColor: hexToRgba(settings.boxColor, 0.16),
+            boxShadow: `0 0 22px ${hexToRgba(settings.boxColor, 0.65)}, inset 0 0 15px ${hexToRgba(settings.boxColor, 0.2)}`,
           }}
         >
+          {/* 4 Precision Corner Targeting Markers */}
           <div
-            className="absolute -top-6 left-0 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-black"
-            style={{ backgroundColor: settings.boxColor }}
+            className="absolute -top-[2px] -left-[2px] w-3 h-3 border-t-2 border-l-2"
+            style={{ borderColor: settings.boxColor }}
+          />
+          <div
+            className="absolute -top-[2px] -right-[2px] w-3 h-3 border-t-2 border-r-2"
+            style={{ borderColor: settings.boxColor }}
+          />
+          <div
+            className="absolute -bottom-[2px] -left-[2px] w-3 h-3 border-b-2 border-l-2"
+            style={{ borderColor: settings.boxColor }}
+          />
+          <div
+            className="absolute -bottom-[2px] -right-[2px] w-3 h-3 border-b-2 border-r-2"
+            style={{ borderColor: settings.boxColor }}
+          />
+
+          {/* Center Precision Target Crosshair */}
+          {selection.width > 50 && selection.height > 50 && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
+              <div className="w-3 h-0.5" style={{ backgroundColor: settings.boxColor }} />
+              <div className="w-0.5 h-3 -ml-[7px]" style={{ backgroundColor: settings.boxColor }} />
+            </div>
+          )}
+
+          {/* High-Precision Dimension Tag */}
+          <div
+            className="absolute -top-7 left-0 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-md animate-in fade-in duration-200"
+            style={{
+              backgroundColor: '#09090b',
+              color: settings.boxColor,
+              border: `1px solid ${hexToRgba(settings.boxColor, 0.6)}`,
+              boxShadow: `0 2px 10px rgba(0,0,0,0.5), 0 0 12px ${hexToRgba(settings.boxColor, 0.4)}`,
+            }}
           >
-            {Math.round(selection.width)} × {Math.round(selection.height)}px
+            <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ backgroundColor: settings.boxColor }} />
+            <span>{Math.round(selection.width)} × {Math.round(selection.height)}px</span>
           </div>
         </div>
+      )}
+
+      {/* Smooth Zoom-Start Focus Lock Transition */}
+      {lockedBox && (
+        <div
+          id="zoom-locked-focus-box"
+          className={`fixed z-[999986] pointer-events-none rounded-sm transition-all duration-300 ease-out ${
+            lockedBox.fading ? 'opacity-0 scale-105 blur-[1px]' : 'opacity-100 scale-100'
+          }`}
+          style={{
+            left: `${lockedBox.left}px`,
+            top: `${lockedBox.top}px`,
+            width: `${lockedBox.width}px`,
+            height: `${lockedBox.height}px`,
+            borderColor: '#ffffff',
+            borderWidth: '2px',
+            borderStyle: 'solid',
+            backgroundColor: hexToRgba(settings.boxColor, 0.28),
+            boxShadow: `0 0 35px ${hexToRgba(settings.boxColor, 0.95)}, 0 0 70px ${hexToRgba(settings.boxColor, 0.45)}`,
+          }}
+        />
       )}
 
       {/* Full-Page Zoom Active Floating Bar */}
