@@ -35,7 +35,7 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
   });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).tagName === 'SELECT') {
+    if ((e.target as HTMLElement).closest('button, input, select, [role="button"]')) {
       return;
     }
     setIsDragging(true);

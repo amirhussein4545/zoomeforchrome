@@ -158,7 +158,7 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
   const handleMouseUp = (e: React.MouseEvent) => {
     if (!isActive || !isDrawing || !selection) return;
 
-    if (selection.width > 25 && selection.height > 25) {
+    if (selection.width > 15 && selection.height > 15) {
       const currentSel = { ...selection };
       const scale = settings.zoomLevel / 100;
       const originX = currentSel.left + currentSel.width / 2 + window.scrollX;
@@ -193,6 +193,52 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
       );
 
       // Trigger smooth fade-out / expansion of the focus box
+      setTimeout(() => {
+        setLockedBox((prev) => prev ? { ...prev, fading: true } : null);
+      }, 80);
+
+      setTimeout(() => {
+        setLockedBox(null);
+      }, 420);
+    } else {
+      // Single-click zoom: zoom directly centered on the clicked position
+      const clickX = selection.startX;
+      const clickY = selection.startY;
+      const boxW = 160;
+      const boxH = 120;
+      const left = Math.max(0, clickX - boxW / 2);
+      const top = Math.max(0, clickY - boxH / 2);
+      const scale = settings.zoomLevel / 100;
+      const originX = clickX + window.scrollX;
+      const originY = clickY + window.scrollY;
+
+      setLockedBox({
+        left,
+        top,
+        width: boxW,
+        height: boxH,
+        fading: false,
+      });
+
+      setLastOrigin({ x: originX, y: originY });
+      setZoomedRegion({
+        left,
+        top,
+        width: boxW,
+        height: boxH,
+        scale,
+        originX,
+        originY,
+      });
+
+      setIsDrawing(false);
+      showToast(
+        lang === 'fa'
+          ? `زوم ${settings.zoomLevel}% در نقطه کلیک اعمال شد`
+          : `Full-page zoom ${settings.zoomLevel}% applied to clicked area!`,
+        'success'
+      );
+
       setTimeout(() => {
         setLockedBox((prev) => prev ? { ...prev, fading: true } : null);
       }, 80);

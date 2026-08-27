@@ -15,16 +15,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   const files = {
     content: {
       name: 'content.js',
-      desc: 'Content Script with Shadow DOM isolation & zero-conflict styles',
+      desc: 'اسکریپت تزریقی صفحه: Shadow DOM ایزوله، رسم کادر، انیمیشن زوم، Lens و Pan',
       code: `/**
- * Zoom Box Pro - Content Script (v8.6.0)
+ * Zoom Box Pro - Content Script (v8.6.2)
  * سیستم پیشرفته زوم تمام‌صفحه با رسم کادر و ایزولاسیون کامل با Shadow DOM
- * سازگاری کامل و ۱۰۰٪ با فایرفاکس، کروم، بریو و مایکروسافت اج
+ * سازگاری ۱۰۰٪ تضمین‌شده با فایرفاکس (Firefox)، گوگل کروم، بریو و اج
  */
-
 (function () {
   'use strict';
-
   if (window.__ZOOM_BOX_PRO_INSTANCE__) {
     return;
   }
@@ -35,6 +33,9 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     constructor() {
       this.isDrawingMode = false;
       this.isDragging = false;
+      this.isPanning = false;
+      this.panStartX = 0;
+      this.panStartY = 0;
       this.startX = 0;
       this.startY = 0;
       this.isZoomed = false;
@@ -50,6 +51,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         shortcutShift: true,
         shortcutAlt: false,
         extensionEnabled: true,
+        lensMode: false
       };
 
       this.rootContainer = null;
@@ -58,6 +60,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       this.selectionBox = null;
       this.floatingPanel = null;
       this.statusBar = null;
+      this.lensHUD = null;
 
       this.init();
     }
@@ -66,15 +69,15 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       await this.loadSettings();
       this.injectHostGlobalStyles();
       this.buildShadowDOM();
-      this.updateStyles();
       this.bindListeners();
+      this.updateStyles();
     }
 
     async loadSettings() {
       try {
-        if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
-          const stored = await browserAPI.storage.sync.get(this.settings);
-          if (stored) {
+        if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+          const stored = await browserAPI.storage.local.get(null);
+          if (stored && stored.zoomLevel !== undefined) {
             this.settings = { ...this.settings, ...stored };
             this.applyPanelValues();
           }
@@ -86,8 +89,8 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
 
     async saveSettings() {
       try {
-        if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
-          await browserAPI.storage.sync.set(this.settings);
+        if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+          await browserAPI.storage.local.set(this.settings);
         }
       } catch (e) {
         console.warn('ZBP storage save error:', e);
@@ -95,10 +98,16 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
 
     injectHostGlobalStyles() {
-      if (document.getElementById('zbp-host-styles')) return;
+      const existing = (document.getElementById && document.getElementById('zbp-host-styles')) || 
+                       (document.head && document.head.querySelector && document.head.querySelector('#zbp-host-styles'));
+      if (existing) return;
+
       const style = document.createElement('style');
       style.id = 'zbp-host-styles';
       style.textContent = \`
+        html {
+          transform-origin: 0 0;
+        }
         body {
           transform-origin: 0 0;
         }
@@ -114,14 +123,20 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           padding: 0 !important;
           margin: 0 !important;
         }
+        #zbp-root-host.zbp-host-active {
+          width: 100vw !important;
+          height: 100vh !important;
+          pointer-events: auto !important;
+        }
       \`;
       (document.head || document.documentElement).appendChild(style);
     }
 
     buildShadowDOM() {
+      if (this.rootContainer && this.shadowRoot) return;
+
       this.rootContainer = document.createElement('div');
       this.rootContainer.id = 'zbp-root-host';
-
       this.shadowRoot = this.rootContainer.attachShadow({ mode: 'open' });
 
       const shadowStyle = document.createElement('style');
@@ -136,7 +151,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           margin: 0 !important;
           padding: 0 !important;
         }
-
         #zbp-overlay {
           position: fixed !important;
           top: 0 !important;
@@ -154,26 +168,24 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           touch-action: none !important;
           pointer-events: auto !important;
         }
-
         .zbp-overlay-tip {
           position: absolute !important;
           top: 24px !important;
           left: 50% !important;
           transform: translateX(-50%) !important;
-          background: rgba(9, 9, 11, 0.92) !important;
+          background: rgba(9, 9, 11, 0.95) !important;
           color: #39FF14 !important;
-          border: 1px solid rgba(57, 255, 20, 0.5) !important;
-          padding: 10px 20px !important;
+          border: 1px solid rgba(57, 255, 20, 0.6) !important;
+          padding: 10px 22px !important;
           border-radius: 9999px !important;
           font-size: 13px !important;
           font-weight: 700 !important;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(57,255,20,0.3) !important;
+          box-shadow: 0 4px 25px rgba(0,0,0,0.7), 0 0 15px rgba(57,255,20,0.35) !important;
           pointer-events: none !important;
           display: flex !important;
           align-items: center !important;
           gap: 8px !important;
         }
-
         @keyframes zbp-box-pulse {
           0%, 100% {
             box-shadow: 0 0 18px rgba(57, 255, 20, 0.6), inset 0 0 10px rgba(57, 255, 20, 0.15) !important;
@@ -182,7 +194,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
             box-shadow: 0 0 28px rgba(57, 255, 20, 0.9), inset 0 0 18px rgba(57, 255, 20, 0.3) !important;
           }
         }
-
         @keyframes zbp-zoom-lock {
           0% {
             transform: scale(1) !important;
@@ -200,7 +211,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
             filter: blur(2px) !important;
           }
         }
-
         #zbp-selection-box {
           position: fixed !important;
           border: 2px dashed #39FF14 !important;
@@ -212,7 +222,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           border-radius: 3px !important;
           animation: zbp-box-pulse 2s ease-in-out infinite !important;
         }
-
         .zbp-corner {
           position: absolute !important;
           width: 8px !important;
@@ -224,18 +233,17 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         .zbp-corner-tr { top: -2px !important; right: -2px !important; border-top: 2px solid #39FF14 !important; border-right: 2px solid #39FF14 !important; }
         .zbp-corner-bl { bottom: -2px !important; left: -2px !important; border-bottom: 2px solid #39FF14 !important; border-left: 2px solid #39FF14 !important; }
         .zbp-corner-br { bottom: -2px !important; right: -2px !important; border-bottom: 2px solid #39FF14 !important; border-right: 2px solid #39FF14 !important; }
-
         .zbp-dimensions-badge {
           position: absolute !important;
-          top: -26px !important;
+          top: -28px !important;
           left: 0 !important;
           background: #09090b !important;
           color: #39FF14 !important;
           border: 1px solid rgba(57, 255, 20, 0.6) !important;
           font-family: monospace !important;
-          font-size: 10px !important;
+          font-size: 11px !important;
           font-weight: 700 !important;
-          padding: 2px 7px !important;
+          padding: 2px 8px !important;
           border-radius: 9999px !important;
           box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 10px rgba(57,255,20,0.3) !important;
           white-space: nowrap !important;
@@ -243,21 +251,63 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           align-items: center !important;
           gap: 4px !important;
         }
-
         .zbp-focus-lock {
           animation: zbp-zoom-lock 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
         }
-
+        #zbp-lens-hud {
+          position: fixed !important;
+          width: 170px !important;
+          height: 170px !important;
+          border: 2px solid #39FF14 !important;
+          border-radius: 50% !important;
+          pointer-events: none !important;
+          z-index: 2147483643 !important;
+          box-shadow: 0 0 25px rgba(57, 255, 20, 0.45), inset 0 0 15px rgba(57, 255, 20, 0.15) !important;
+          display: none;
+          transform: translate(-50%, -50%) !important;
+          backdrop-filter: contrast(1.1) !important;
+        }
+        .zbp-lens-cross-h {
+          position: absolute !important;
+          top: 50% !important;
+          left: 10px !important;
+          right: 10px !important;
+          height: 1px !important;
+          background: rgba(57, 255, 20, 0.6) !important;
+        }
+        .zbp-lens-cross-v {
+          position: absolute !important;
+          left: 50% !important;
+          top: 10px !important;
+          bottom: 10px !important;
+          width: 1px !important;
+          background: rgba(57, 255, 20, 0.6) !important;
+        }
+        .zbp-lens-label {
+          position: absolute !important;
+          bottom: -24px !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          background: #09090b !important;
+          color: #39FF14 !important;
+          border: 1px solid rgba(57, 255, 20, 0.7) !important;
+          padding: 2px 8px !important;
+          border-radius: 9999px !important;
+          font-family: monospace !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+        }
         #zbp-floating-panel {
           position: fixed !important;
           bottom: 24px !important;
           right: 24px !important;
-          width: 280px !important;
-          background: #09090b !important;
+          width: 290px !important;
+          background: #090d0b !important;
           color: #f4f4f5 !important;
-          border: 1px solid #27272a !important;
-          border-radius: 12px !important;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(57, 255, 20, 0.1) !important;
+          border: 2px solid #39FF14 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(57, 255, 20, 0.2) !important;
           z-index: 2147483643 !important;
           padding: 14px !important;
           user-select: none !important;
@@ -265,46 +315,42 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           pointer-events: auto !important;
           direction: rtl !important;
         }
-
         .zbp-panel-header {
           display: flex !important;
           align-items: center !important;
           justify-content: space-between !important;
-          border-bottom: 1px solid #27272a !important;
+          border-bottom: 1px solid rgba(39, 39, 42, 0.8) !important;
           padding-bottom: 8px !important;
           margin-bottom: 12px !important;
         }
-
         .zbp-panel-title {
           font-size: 13px !important;
           font-weight: 700 !important;
-          color: #39FF14 !important;
+          color: #7dd3fc !important;
           display: flex !important;
           align-items: center !important;
           gap: 6px !important;
         }
-
         .zbp-close-btn {
-          background: transparent !important;
-          border: none !important;
-          color: #a1a1aa !important;
+          background: #000000 !important;
+          border: 1px solid rgba(56, 189, 248, 0.8) !important;
+          color: #39FF14 !important;
           cursor: pointer !important;
-          font-size: 16px !important;
-          padding: 2px 6px !important;
-          border-radius: 4px !important;
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          padding: 4px 8px !important;
+          border-radius: 6px !important;
+          transition: all 0.2s ease !important;
         }
         .zbp-close-btn:hover {
-          color: #ffffff !important;
-          background: #27272a !important;
+          background: rgba(56, 189, 248, 0.2) !important;
         }
-
         .zbp-btn {
           width: 100% !important;
           padding: 9px 12px !important;
-          border-radius: 8px !important;
-          border: none !important;
-          font-weight: 700 !important;
+          border-radius: 10px !important;
           font-size: 12px !important;
+          font-weight: 700 !important;
           cursor: pointer !important;
           display: flex !important;
           align-items: center !important;
@@ -313,101 +359,96 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           transition: all 0.2s ease !important;
           margin-bottom: 8px !important;
         }
-
         .zbp-btn-primary {
-          background: #39FF14 !important;
-          color: #09090b !important;
+          background: #000000 !important;
+          color: #39FF14 !important;
+          border: 2px solid #38bdf8 !important;
+          box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
         }
         .zbp-btn-primary:hover {
-          background: #2ecc71 !important;
-          box-shadow: 0 0 12px rgba(57, 255, 20, 0.4) !important;
+          background: rgba(56, 189, 248, 0.15) !important;
         }
-
         .zbp-btn-active {
-          background: #e11d48 !important;
-          color: #ffffff !important;
+          background: #39FF14 !important;
+          color: #000000 !important;
+          border-color: #39FF14 !important;
         }
-
         .zbp-slider-wrap {
-          margin-top: 10px !important;
-          padding: 8px !important;
-          background: #18181b !important;
-          border-radius: 8px !important;
-          border: 1px solid #27272a !important;
+          margin-top: 8px !important;
         }
-
         .zbp-slider-header {
           display: flex !important;
           justify-content: space-between !important;
-          font-size: 11px !important;
-          color: #a1a1aa !important;
+          font-size: 12px !important;
+          color: #7dd3fc !important;
+          font-weight: 700 !important;
           margin-bottom: 6px !important;
         }
-
         .zbp-slider-val {
           color: #39FF14 !important;
-          font-weight: 700 !important;
+          font-family: monospace !important;
         }
-
-        input[type=range].zbp-range {
+        .zbp-range {
           width: 100% !important;
+          height: 6px !important;
+          background: #27272a !important;
+          border-radius: 4px !important;
           accent-color: #39FF14 !important;
           cursor: pointer !important;
         }
-
         #zbp-status-bar {
           position: fixed !important;
-          top: 16px !important;
+          bottom: 24px !important;
           left: 50% !important;
           transform: translateX(-50%) !important;
-          background: rgba(9, 9, 11, 0.95) !important;
-          color: #f4f4f5 !important;
-          border: 1px solid rgba(57, 255, 20, 0.4) !important;
+          background: #09090b !important;
+          border: 2px solid #39FF14 !important;
           border-radius: 9999px !important;
-          padding: 6px 14px !important;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 15px rgba(57, 255, 20, 0.2) !important;
+          padding: 8px 18px !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(57, 255, 20, 0.3) !important;
           z-index: 2147483644 !important;
           display: none;
           align-items: center !important;
           gap: 12px !important;
-          pointer-events: auto !important;
+          font-family: monospace !important;
           font-size: 12px !important;
+          color: #ffffff !important;
+          pointer-events: auto !important;
+          direction: ltr !important;
+        }
+        .zbp-status-text {
+          font-weight: 700 !important;
+          color: #7dd3fc !important;
           direction: rtl !important;
         }
-
-        .zbp-status-text {
-          color: #a1a1aa !important;
-          font-size: 11px !important;
-        }
-
         .zbp-status-val {
           color: #39FF14 !important;
           font-weight: 700 !important;
         }
-
         .zbp-bar-btn {
           background: #18181b !important;
+          border: 1px solid #3f3f46 !important;
           color: #f4f4f5 !important;
-          border: 1px solid #27272a !important;
-          padding: 4px 8px !important;
+          padding: 3px 8px !important;
           border-radius: 6px !important;
           cursor: pointer !important;
-          font-size: 11px !important;
-          font-weight: 600 !important;
-          transition: all 0.15s ease !important;
+          font-weight: 700 !important;
+          transition: all 0.2s ease !important;
         }
         .zbp-bar-btn:hover {
           background: #27272a !important;
-          border-color: #3f3f46 !important;
+          color: #39FF14 !important;
         }
-
         .zbp-bar-btn-reset {
           background: rgba(225, 29, 72, 0.2) !important;
           color: #fb7185 !important;
-          border-color: rgba(225, 29, 72, 0.4) !important;
+          border-color: rgba(225, 29, 72, 0.5) !important;
+          padding: 3px 10px !important;
+          border-radius: 9999px !important;
         }
         .zbp-bar-btn-reset:hover {
           background: rgba(225, 29, 72, 0.4) !important;
+          color: #ffffff !important;
         }
       \`;
       this.shadowRoot.appendChild(shadowStyle);
@@ -430,11 +471,20 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         <div class="zbp-corner zbp-corner-bl"></div>
         <div class="zbp-corner zbp-corner-br"></div>
         <div class="zbp-dimensions-badge" id="zbp-dim-badge">
-          <span style="width:5px;height:5px;border-radius:50%;background:#39FF14;display:inline-block;"></span>
+          <span style="width:6px;height:6px;border-radius:50%;background:#39FF14;display:inline-block;"></span>
           <span id="zbp-dim-text">0 × 0px</span>
         </div>
       \`;
       this.shadowRoot.appendChild(this.selectionBox);
+
+      this.lensHUD = document.createElement('div');
+      this.lensHUD.id = 'zbp-lens-hud';
+      this.lensHUD.innerHTML = \`
+        <div class="zbp-lens-cross-h"></div>
+        <div class="zbp-lens-cross-v"></div>
+        <div class="zbp-lens-label" id="zbp-lens-label">LENS \${this.settings.zoomLevel}%</div>
+      \`;
+      this.shadowRoot.appendChild(this.lensHUD);
 
       this.floatingPanel = document.createElement('div');
       this.floatingPanel.id = 'zbp-floating-panel';
@@ -481,24 +531,26 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         styleEl.id = 'zbp-dynamic-style';
         this.shadowRoot.appendChild(styleEl);
       }
+
       const c = this.settings.boxColor || '#39FF14';
-      
-      // Convert hex to rgb for rgba transparency
       let r = 57, g = 255, b = 20;
       if (c.match(/^#([0-9a-f]{6})$/i)) {
         r = parseInt(c.slice(1, 3), 16);
         g = parseInt(c.slice(3, 5), 16);
         b = parseInt(c.slice(5, 7), 16);
       }
-      
+
       styleEl.textContent = \`
-        .zbp-overlay-tip, .zbp-dimensions-badge {
+        .zbp-overlay-tip, .zbp-dimensions-badge, #zbp-lens-hud, .zbp-lens-label {
           color: \${c} !important;
-          border-color: rgba(\${r}, \${g}, \${b}, 0.5) !important;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(\${r}, \${g}, \${b}, 0.3) !important;
+          border-color: rgba(\${r}, \${g}, \${b}, 0.6) !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(\${r}, \${g}, \${b}, 0.35) !important;
         }
         #zbp-dim-badge span {
           background: \${c} !important;
+        }
+        .zbp-lens-cross-h, .zbp-lens-cross-v {
+          background: rgba(\${r}, \${g}, \${b}, 0.6) !important;
         }
         #zbp-selection-box {
           border-color: \${c} !important;
@@ -508,32 +560,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         .zbp-corner {
           border-color: \${c} !important;
         }
-        @keyframes zbp-box-pulse {
-          0%, 100% { box-shadow: 0 0 18px rgba(\${r}, \${g}, \${b}, 0.6), inset 0 0 10px rgba(\${r}, \${g}, \${b}, 0.15) !important; }
-          50% { box-shadow: 0 0 28px rgba(\${r}, \${g}, \${b}, 0.9), inset 0 0 18px rgba(\${r}, \${g}, \${b}, 0.3) !important; }
-        }
-        @keyframes zbp-fade-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-        #zbp-selection-box {
-          animation: zbp-box-pulse 2s ease-in-out infinite, zbp-fade-in 0.3s ease-out !important;
-        }
-        @keyframes zbp-zoom-lock {
-          0% { transform: scale(1) !important; opacity: 1 !important; border-color: #ffffff !important; box-shadow: 0 0 35px rgba(\${r}, \${g}, \${b}, 1), 0 0 70px rgba(\${r}, \${g}, \${b}, 0.5) !important; }
-          60% { transform: scale(1.04) !important; opacity: 0.9 !important; }
-          100% { transform: scale(1.08) !important; opacity: 0 !important; filter: blur(2px) !important; }
-        }
       \`;
 
-      // Update dimming effect
       if (this.isZoomed) {
         let dimOverlay = this.shadowRoot.querySelector('#zbp-dim-overlay');
         if (!dimOverlay) {
           dimOverlay = document.createElement('div');
           dimOverlay.id = 'zbp-dim-overlay';
           dimOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483640;transition:opacity 0.65s;';
-          // Insert it as the first child of shadowRoot so it's behind everything else in the shadow DOM but above the page
           this.shadowRoot.insertBefore(dimOverlay, this.shadowRoot.firstChild);
         }
         dimOverlay.style.backgroundColor = \`rgba(0,0,0,\${this.settings.opacity / 100})\`;
@@ -550,15 +584,16 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       if (!this.shadowRoot) return;
       const levelVal = this.shadowRoot.querySelector('#zbp-level-val');
       const slider = this.shadowRoot.querySelector('#zbp-zoom-slider');
+      const lensLabel = this.shadowRoot.querySelector('#zbp-lens-label');
       if (levelVal) levelVal.textContent = \`\${this.settings.zoomLevel}%\`;
       if (slider) slider.value = this.settings.zoomLevel;
+      if (lensLabel) lensLabel.textContent = \`LENS \${this.settings.zoomLevel}%\`;
     }
 
     bindListeners() {
       if (browserAPI && browserAPI.runtime && browserAPI.runtime.onMessage) {
         browserAPI.runtime.onMessage.addListener((req, sender, sendResponse) => {
           if (!req) return;
-
           if (req.action === 'toggleExtensionUI') {
             this.togglePanel();
           } else if (req.action === 'startDrawingMode') {
@@ -579,7 +614,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           } else if (req.action === 'resetZoom') {
             this.zoomOutSmoothly();
           }
-
           if (typeof sendResponse === 'function') {
             sendResponse({ success: true, isZoomed: this.isZoomed });
           }
@@ -587,58 +621,76 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         });
       }
 
-      this.shadowRoot.querySelector('#zbp-close-panel').addEventListener('click', () => {
-        this.floatingPanel.style.display = 'none';
-      });
-
-      const drawBtn = this.shadowRoot.querySelector('#zbp-toggle-draw');
-      drawBtn.addEventListener('click', () => {
-        if (this.isDrawingMode) {
-          this.cancelDrawing();
-        } else {
-          this.startDrawingMode();
+      if (this.shadowRoot) {
+        const closeBtn = this.shadowRoot.querySelector('#zbp-close-panel');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            if (this.floatingPanel) this.floatingPanel.style.display = 'none';
+          });
         }
-      });
 
-      const slider = this.shadowRoot.querySelector('#zbp-zoom-slider');
-      slider.addEventListener('input', async (e) => {
-        this.settings.zoomLevel = parseInt(e.target.value, 10);
-        this.shadowRoot.querySelector('#zbp-level-val').textContent = \`\${this.settings.zoomLevel}%\`;
-        await this.saveSettings();
-        if (this.isZoomed) {
-          this.updateZoomScale();
+        const drawBtn = this.shadowRoot.querySelector('#zbp-toggle-draw');
+        if (drawBtn) {
+          drawBtn.addEventListener('click', () => {
+            if (this.isDrawingMode) {
+              this.cancelDrawing();
+            } else {
+              this.startDrawingMode();
+            }
+          });
         }
-      });
 
-      this.shadowRoot.querySelector('#zbp-bar-dec').addEventListener('click', async () => {
-        this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
-        this.applyPanelValues();
-        this.updateZoomScale();
-        await this.saveSettings();
-      });
+        const slider = this.shadowRoot.querySelector('#zbp-zoom-slider');
+        if (slider) {
+          slider.addEventListener('input', async (e) => {
+            this.settings.zoomLevel = parseInt(e.target.value, 10);
+            const levelVal = this.shadowRoot.querySelector('#zbp-level-val');
+            if (levelVal) levelVal.textContent = \`\${this.settings.zoomLevel}%\`;
+            await this.saveSettings();
+            if (this.isZoomed) {
+              this.updateZoomScale();
+            }
+          });
+        }
 
-      this.shadowRoot.querySelector('#zbp-bar-inc').addEventListener('click', async () => {
-        this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
-        this.applyPanelValues();
-        this.updateZoomScale();
-        await this.saveSettings();
-      });
+        const decBtn = this.shadowRoot.querySelector('#zbp-bar-dec');
+        if (decBtn) {
+          decBtn.addEventListener('click', async () => {
+            this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
+            this.applyPanelValues();
+            this.updateZoomScale();
+            await this.saveSettings();
+          });
+        }
 
-      this.shadowRoot.querySelector('#zbp-bar-reset').addEventListener('click', () => {
-        this.zoomOutSmoothly();
-      });
+        const incBtn = this.shadowRoot.querySelector('#zbp-bar-inc');
+        if (incBtn) {
+          incBtn.addEventListener('click', async () => {
+            this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
+            this.applyPanelValues();
+            this.updateZoomScale();
+            await this.saveSettings();
+          });
+        }
 
-      // میانبرهای کیبورد
+        const resetBtn = this.shadowRoot.querySelector('#zbp-bar-reset');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', () => {
+            this.zoomOutSmoothly();
+          });
+        }
+      }
+
+      // Keyboard Controls
       window.addEventListener('keydown', (e) => {
-        // Only trigger shortcut if not typing in input
-        const tag = e.target.tagName.toLowerCase();
+        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
         if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
         const isCtrl = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
         const isAlt = e.altKey;
-        const key = e.key.toUpperCase();
-        const code = e.code.replace('Key', '').toUpperCase();
+        const key = e.key ? e.key.toUpperCase() : '';
+        const code = e.code ? e.code.replace('Key', '').toUpperCase() : '';
 
         const matchCtrl = this.settings.shortcutCtrl ? isCtrl : !isCtrl;
         const matchShift = this.settings.shortcutShift ? isShift : !isShift;
@@ -659,29 +711,71 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
           } else if (this.isZoomed) {
             this.zoomOutSmoothly();
           }
+        } else if (this.isZoomed && !this.isDrawingMode) {
+          if (e.key === '+' || e.key === '=') {
+            e.preventDefault();
+            this.settings.zoomLevel = Math.min(500, this.settings.zoomLevel + 25);
+            this.applyPanelValues();
+            this.updateZoomScale();
+          } else if (e.key === '-' || e.key === '_') {
+            e.preventDefault();
+            this.settings.zoomLevel = Math.max(50, this.settings.zoomLevel - 25);
+            this.applyPanelValues();
+            this.updateZoomScale();
+          } else if (e.key === '0') {
+            e.preventDefault();
+            this.zoomOutSmoothly();
+          }
         }
       }, true);
 
-      // رویدادهای رسم با موس
-      this.overlay.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        this.isDragging = true;
-        this.startX = e.clientX;
-        this.startY = e.clientY;
-        this.selectionBox.classList.remove('zbp-focus-lock');
-        this.selectionBox.style.display = 'block';
-        this.selectionBox.style.left = \`\${this.startX}px\`;
-        this.selectionBox.style.top = \`\${this.startY}px\`;
-        this.selectionBox.style.width = '0px';
-        this.selectionBox.style.height = '0px';
-        e.preventDefault();
-        e.stopPropagation();
-      });
-
+      // Lens Mode Cursor Follower
       window.addEventListener('mousemove', (e) => {
-        if (!this.isDragging || !this.isDrawingMode) return;
-        const currentX = Math.max(0, Math.min(window.innerWidth, e.clientX));
-        const currentY = Math.max(0, Math.min(window.innerHeight, e.clientY));
+        if (this.settings.lensMode && !this.isDrawingMode && !this.isZoomed && this.lensHUD) {
+          this.lensHUD.style.display = 'block';
+          this.lensHUD.style.left = \`\${e.clientX}px\`;
+          this.lensHUD.style.top = \`\${e.clientY}px\`;
+        } else if (this.lensHUD) {
+          this.lensHUD.style.display = 'none';
+        }
+      }, { passive: true });
+
+      // Drawing Overlay Start
+      const startDraw = (clientX, clientY) => {
+        this.isDragging = true;
+        this.startX = clientX;
+        this.startY = clientY;
+        if (this.selectionBox) {
+          this.selectionBox.classList.remove('zbp-focus-lock');
+          this.selectionBox.style.display = 'block';
+          this.selectionBox.style.left = \`\${this.startX}px\`;
+          this.selectionBox.style.top = \`\${this.startY}px\`;
+          this.selectionBox.style.width = '0px';
+          this.selectionBox.style.height = '0px';
+        }
+      };
+
+      if (this.overlay) {
+        this.overlay.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          startDraw(e.clientX, e.clientY);
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        this.overlay.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches[0]) {
+            startDraw(e.touches[0].clientX, e.touches[0].clientY);
+            e.preventDefault();
+          }
+        }, { passive: false });
+      }
+
+      // Drawing Overlay Drag Move
+      const moveDraw = (clientX, clientY) => {
+        if (!this.isDragging || !this.isDrawingMode || !this.selectionBox) return;
+        const currentX = Math.max(0, Math.min(window.innerWidth, clientX));
+        const currentY = Math.max(0, Math.min(window.innerHeight, clientY));
         const left = Math.min(currentX, this.startX);
         const top = Math.min(currentY, this.startY);
         const width = Math.abs(currentX - this.startX);
@@ -692,24 +786,38 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         this.selectionBox.style.width = \`\${width}px\`;
         this.selectionBox.style.height = \`\${height}px\`;
 
-        const dimText = this.shadowRoot.querySelector('#zbp-dim-text');
+        const dimText = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-dim-text') : null;
         if (dimText) {
           dimText.textContent = \`\${Math.round(width)} × \${Math.round(height)}px\`;
         }
+      };
 
-        e.preventDefault();
+      window.addEventListener('mousemove', (e) => {
+        if (this.isDragging && this.isDrawingMode) {
+          moveDraw(e.clientX, e.clientY);
+          e.preventDefault();
+        }
       }, { passive: false });
 
-      window.addEventListener('mouseup', (e) => {
-        if (!this.isDragging || !this.isDrawingMode) return;
+      window.addEventListener('touchmove', (e) => {
+        if (this.isDragging && this.isDrawingMode && e.touches && e.touches[0]) {
+          moveDraw(e.touches[0].clientX, e.touches[0].clientY);
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // Drawing Overlay End / Apply Zoom
+      const endDraw = () => {
+        if (!this.isDragging || !this.isDrawingMode || !this.selectionBox) return;
         this.isDragging = false;
         const rect = this.selectionBox.getBoundingClientRect();
 
-        // انیمیشن نرم تأیید فوکوس قبل از زوم
         this.selectionBox.classList.add('zbp-focus-lock');
         setTimeout(() => {
-          this.selectionBox.style.display = 'none';
-          this.selectionBox.classList.remove('zbp-focus-lock');
+          if (this.selectionBox) {
+            this.selectionBox.style.display = 'none';
+            this.selectionBox.classList.remove('zbp-focus-lock');
+          }
         }, 380);
 
         this.cancelDrawing();
@@ -717,12 +825,55 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         if (rect.width >= 15 && rect.height >= 15) {
           this.applyFullPageZoom(rect);
         } else {
+          // Single-click zoom: centered 160x120 around click point
           this.applyFullPageZoom({
-            left: this.startX - 60,
-            top: this.startY - 60,
-            width: 120,
+            left: Math.max(0, this.startX - 80),
+            top: Math.max(0, this.startY - 60),
+            width: 160,
             height: 120
           });
+        }
+      };
+
+      window.addEventListener('mouseup', (e) => {
+        if (this.isDragging && this.isDrawingMode) {
+          endDraw();
+        }
+      });
+
+      window.addEventListener('touchend', (e) => {
+        if (this.isDragging && this.isDrawingMode) {
+          endDraw();
+        }
+      });
+
+      // Pan support when zoomed (Middle click or Space+Drag)
+      window.addEventListener('mousedown', (e) => {
+        if (this.isZoomed && (e.button === 1 || (e.button === 0 && e.spaceKey))) {
+          this.isPanning = true;
+          this.panStartX = e.clientX;
+          this.panStartY = e.clientY;
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (this.isPanning && this.isZoomed) {
+          const dx = e.clientX - this.panStartX;
+          const dy = e.clientY - this.panStartY;
+          this.panStartX = e.clientX;
+          this.panStartY = e.clientY;
+          this.lastOriginX -= dx;
+          this.lastOriginY -= dy;
+          const target = document.body || document.documentElement;
+          target.style.transition = 'none';
+          target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
+        }
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (this.isPanning) {
+          this.isPanning = false;
         }
       });
     }
@@ -737,8 +888,18 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
 
     startDrawingMode() {
+      // If already zoomed, smoothly reset first for crisp selection
+      if (this.isZoomed) {
+        this.zoomOutSmoothly();
+      }
+
       this.isDrawingMode = true;
+      if (this.rootContainer) {
+        this.rootContainer.classList.add('zbp-host-active');
+      }
       if (this.overlay) this.overlay.style.display = 'block';
+      if (this.lensHUD) this.lensHUD.style.display = 'none';
+
       const drawBtn = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-toggle-draw') : null;
       if (drawBtn) {
         drawBtn.textContent = '❌ لغو انتخاب';
@@ -749,6 +910,9 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     cancelDrawing() {
       this.isDrawingMode = false;
       this.isDragging = false;
+      if (this.rootContainer && !this.isZoomed) {
+        this.rootContainer.classList.remove('zbp-host-active');
+      }
       if (this.overlay) this.overlay.style.display = 'none';
       if (this.selectionBox) this.selectionBox.style.display = 'none';
       const drawBtn = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-toggle-draw') : null;
@@ -763,7 +927,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       const scale = this.settings.zoomLevel / 100;
       const scrollX = window.scrollX || window.pageXOffset || 0;
       const scrollY = window.scrollY || window.pageYOffset || 0;
-
       this.lastOriginX = rect.left + (rect.width / 2) + scrollX;
       this.lastOriginY = rect.top + (rect.height / 2) + scrollY;
 
@@ -774,7 +937,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
 
       if (this.statusBar) {
         this.statusBar.style.display = 'flex';
-        const valEl = this.shadowRoot.querySelector('#zbp-bar-val');
+        const valEl = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-bar-val') : null;
         if (valEl) valEl.textContent = \`\${this.settings.zoomLevel}%\`;
       }
       this.updateStyles();
@@ -787,7 +950,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       target.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
       target.style.transform = \`scale(\${scale})\`;
       if (this.statusBar) {
-        const valEl = this.shadowRoot.querySelector('#zbp-bar-val');
+        const valEl = this.shadowRoot ? this.shadowRoot.querySelector('#zbp-bar-val') : null;
         if (valEl) valEl.textContent = \`\${this.settings.zoomLevel}%\`;
       }
       this.updateStyles();
@@ -796,17 +959,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     zoomOutSmoothly() {
       this.isZoomed = false;
       this.cancelDrawing();
-
       const target = document.body || document.documentElement;
       target.style.transition = 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1)';
       target.style.transformOrigin = \`\${this.lastOriginX}px \${this.lastOriginY}px\`;
       target.style.transform = 'scale(1)';
-
       if (this.statusBar) {
         this.statusBar.style.display = 'none';
       }
       this.updateStyles();
-
       setTimeout(() => {
         if (!this.isZoomed) {
           target.style.transform = 'none';
@@ -825,15 +985,16 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   } else {
     launch();
   }
-})();`,
+})();
+`,
     },
     manifest: {
       name: 'manifest.json',
-      desc: 'Firefox & Chrome MV3 Manifest (Gecko Event Script)',
+      desc: 'فایل مانیفست استاندارد Manifest V3 سازگار با فایرفاکس، کروم، بریو و اج',
       code: `{
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "8.6.0",
+  "version": "8.6.2",
   "description": "افزونه زوم حرفه‌ای تمام‌صفحه با رسم کادر انتخابی و انیمیشن روان - سازگار کامل با فایرفاکس، کروم، بریو و اج",
   "browser_specific_settings": {
     "gecko": {
@@ -894,7 +1055,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     },
     popupHtml: {
       name: 'popup.html',
-      desc: 'Toolbar Action Popup UI (Dark & Neon Theme)',
+      desc: 'رابط کاربری پاپ‌آپ با کنترل‌های کامل زوم، رنگ، میانبرها و نشانگر ذره‌بین',
       code: `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -906,111 +1067,99 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Vazirmatn, Tahoma, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
     }
-
     body {
       width: 320px;
-      background: #090d0b;
-      color: #f4f4f5;
       padding: 14px;
-      user-select: none;
-      border: 2px solid #39FF14;
-      border-radius: 18px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(57, 255, 20, 0.2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Vazirmatn, Tahoma, sans-serif;
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-size: 13px;
+      line-height: 1.4;
+      direction: rtl;
     }
-
     .header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(39, 39, 42, 0.8);
-      padding-bottom: 10px;
+      align-items: center;
       margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(39, 39, 42, 0.8);
     }
-
     .header-title {
+      font-weight: 800;
+      font-size: 13px;
+      color: #38bdf8;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #7dd3fc;
+      gap: 6px;
     }
-
     .status-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #39FF14;
-      box-shadow: 0 0 10px #39FF14;
+      box-shadow: 0 0 8px #39FF14;
       display: inline-block;
     }
-
     .header-btn {
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      border: 1px solid rgba(56, 189, 248, 0.8);
-      background: #000000;
-      color: #39FF14;
-      font-size: 13px;
-      font-weight: 700;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      color: #a1a1aa;
       cursor: pointer;
-      transition: all 0.2s ease;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
     .header-btn:hover {
-      background: rgba(56, 189, 248, 0.2);
+      color: #39FF14;
+      border-color: #39FF14;
     }
-
     .btn-main {
       width: 100%;
       padding: 10px 14px;
-      border-radius: 12px;
-      font-weight: 700;
+      border-radius: 10px;
       font-size: 13px;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all 0.2s ease;
       margin-bottom: 8px;
+      transition: all 0.2s ease;
     }
-
     .btn-activate {
       background: #000000;
       color: #39FF14;
-      border: 2px solid #38bdf8;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+      border: 2px solid #39FF14;
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.25);
     }
     .btn-activate:hover {
-      background: rgba(56, 189, 248, 0.15);
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+      background: rgba(57, 255, 20, 0.15);
+      box-shadow: 0 0 18px rgba(57, 255, 20, 0.45);
     }
-
     .btn-reset {
-      background: #140507;
+      background: #09090b;
       color: #fb7185;
-      border: 1.5px solid rgba(225, 29, 72, 0.8);
-      padding: 8px 14px;
+      border: 1px solid rgba(225, 29, 72, 0.6);
     }
     .btn-reset:hover {
-      background: rgba(225, 29, 72, 0.2);
+      background: rgba(225, 29, 72, 0.15);
+      border-color: #fb7185;
       color: #ffffff;
     }
-
     .presets-wrap {
-      margin-top: 4px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .presets-label {
       font-size: 11px;
-      font-weight: 700;
       color: #7dd3fc;
+      font-weight: 700;
       margin-bottom: 6px;
       display: block;
     }
@@ -1020,13 +1169,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       gap: 6px;
     }
     .preset-btn {
-      padding: 6px 0;
-      border-radius: 8px;
-      border: 1px solid #3f3f46;
       background: #18181b;
-      color: #f4f4f5;
-      font-size: 11px;
+      border: 1px solid #3f3f46;
+      color: #d4d4d8;
+      border-radius: 8px;
+      padding: 6px 0;
+      font-family: monospace;
       font-weight: 700;
+      font-size: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
@@ -1036,13 +1186,12 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
     .preset-btn.active {
       border-color: #39FF14;
-      background: rgba(57, 255, 20, 0.15);
+      background: rgba(57, 255, 20, 0.18);
       color: #39FF14;
-      box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.35);
     }
-
     .slider-section {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .slider-header {
       display: flex;
@@ -1059,22 +1208,20 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       font-family: monospace;
       font-weight: 700;
       font-size: 11px;
-      padding: 2px 7px;
+      padding: 2px 8px;
       border-radius: 6px;
       background: rgba(57, 255, 20, 0.15);
       border: 1px solid rgba(57, 255, 20, 0.5);
       color: #39FF14;
     }
-
     input[type="range"] {
       width: 100%;
-      accent-color: #ffffff;
+      accent-color: #39FF14;
       cursor: pointer;
-      height: 4px;
+      height: 5px;
       background: #27272a;
-      border-radius: 2px;
+      border-radius: 3px;
     }
-
     .two-cols {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1098,11 +1245,15 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     }
     .color-preview-btn {
       width: 36px;
-      height: 32px;
+      height: 30px;
       border-radius: 8px;
       border: 2px solid rgba(255, 255, 255, 0.6);
       background: #39FF14;
       cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .color-preview-btn:hover {
+      transform: scale(1.05);
     }
     .hex-code {
       font-family: monospace;
@@ -1111,7 +1262,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       font-weight: 600;
       text-transform: uppercase;
     }
-
     .shortcut-box {
       border-top: 1px solid rgba(39, 39, 42, 0.8);
       padding-top: 8px;
@@ -1170,7 +1320,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       background: #39FF14;
       border-color: #39FF14;
     }
-
     .key-select-row {
       display: flex;
       justify-content: space-between;
@@ -1192,7 +1341,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       font-size: 12px;
       cursor: pointer;
     }
-
     .lens-row {
       border-top: 1px solid rgba(39, 39, 42, 0.8);
       padding-top: 8px;
@@ -1200,6 +1348,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
     }
     .lens-title {
       display: flex;
@@ -1209,7 +1358,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       font-weight: 700;
       color: #f4f4f5;
     }
-
     .footer-text {
       text-align: center;
       font-family: monospace;
@@ -1217,7 +1365,6 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       color: #a1a1aa;
       padding-top: 4px;
     }
-
     .restricted-msg {
       display: none;
       padding: 6px 10px;
@@ -1238,7 +1385,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       <span class="status-dot"></span>
       <span>تنظیمات زوم (Zoom Box Pro)</span>
     </div>
-    <button id="btn-collapse" class="header-btn" title="بستن">^</button>
+    <button type="button" id="btn-collapse" class="header-btn" title="بستن">✕</button>
   </div>
 
   <div id="restricted-notice" class="restricted-msg">
@@ -1246,24 +1393,24 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   </div>
 
   <!-- Action Buttons -->
-  <button id="btn-draw" class="btn-main btn-activate">
+  <button type="button" id="btn-draw" class="btn-main btn-activate">
     <span>🔍</span>
-    <span id="btn-draw-text">فعال کردن زوم</span>
+    <span id="btn-draw-text">شروع رسم کادر زوم</span>
   </button>
 
-  <button id="btn-reset" class="btn-main btn-reset">
-    <span>🔄 ❌</span>
-    <span>بازگشت به 100%</span>
+  <button type="button" id="btn-reset" class="btn-main btn-reset">
+    <span>🔄</span>
+    <span>بازگشت به ۱۰۰٪ (Esc)</span>
   </button>
 
   <!-- Quick Presets -->
   <div class="presets-wrap">
     <span class="presets-label">مقادیر سریع:</span>
     <div class="presets-grid">
-      <button class="preset-btn" data-val="150">150%</button>
-      <button class="preset-btn active" data-val="200">200%</button>
-      <button class="preset-btn" data-val="300">300%</button>
-      <button class="preset-btn" data-val="400">400%</button>
+      <button type="button" class="preset-btn" data-val="150">150%</button>
+      <button type="button" class="preset-btn active" data-val="200">200%</button>
+      <button type="button" class="preset-btn" data-val="300">300%</button>
+      <button type="button" class="preset-btn" data-val="400">400%</button>
     </div>
   </div>
 
@@ -1281,14 +1428,14 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
     <div>
       <span class="col-header">رنگ کادر:</span>
       <div class="color-picker-box">
-        <button id="color-preview" class="color-preview-btn"></button>
+        <button type="button" id="color-preview" class="color-preview-btn"></button>
         <input type="color" id="color-input" value="#39FF14" style="display:none;">
         <span id="hex-label" class="hex-code">#39FF14</span>
       </div>
     </div>
     <div>
       <div class="col-header">
-        <span>شفافیت پس‌زمینه:</span>
+        <span>تیرگی پس‌زمینه:</span>
         <span id="opacity-val" style="color:#d4d4d8;font-family:monospace;">50%</span>
       </div>
       <input type="range" id="opacity-slider" min="0" max="95" step="5" value="50" style="margin-top:6px;">
@@ -1301,6 +1448,7 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
       <span class="slider-title">تنظیم کلید میانبر</span>
       <span id="shortcut-display" class="shortcut-badge">Ctrl + Shift + Z</span>
     </div>
+
     <div class="modifiers-container">
       <div class="mod-item" id="mod-ctrl">
         <span>Ctrl</span>
@@ -1315,8 +1463,9 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
         <div class="mod-checkbox" id="chk-alt"></div>
       </div>
     </div>
+
     <div class="key-select-row">
-      <span class="key-select-label">کلید میانبر فعال‌سازی:</span>
+      <span class="key-select-label">کلید فعال‌سازی:</span>
       <select id="key-dropdown" class="key-dropdown">
         <option value="Z">Z</option>
         <option value="X">X</option>
@@ -1334,12 +1483,12 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
   </div>
 
   <!-- Lens Mode -->
-  <div class="lens-row">
+  <div class="lens-row" id="row-lens">
     <div class="lens-title">
       <span style="color:#39FF14;">👁️</span>
-      <span>حالت ذره‌بین (Lens)</span>
+      <span>حالت نشانگر ذره‌بین (Lens HUD)</span>
     </div>
-    <div class="mod-checkbox" id="chk-lens" style="cursor:pointer;"></div>
+    <div class="mod-checkbox" id="chk-lens"></div>
   </div>
 
   <!-- Footer -->
@@ -1349,11 +1498,12 @@ export const ExtensionViewer: React.FC<Props> = ({ lang }) => {
 
   <script src="popup.js"></script>
 </body>
-</html>`,
+</html>
+`,
     },
     popupJs: {
       name: 'popup.js',
-      desc: 'Popup Controller script with full UI sync and tab messaging',
+      desc: 'منطق ارتباط پاپ‌آپ با تب فعال، کنترل رویدادها و ذخیره‌سازی تنظیمات',
       code: `// popup.js - کنترلر پنجره پاپ‌آپ افزونه Zoom Box Pro
 document.addEventListener('DOMContentLoaded', async () => {
   const browserAPI = (typeof browser !== 'undefined' && browser.runtime) ? browser : (typeof chrome !== 'undefined' ? chrome : null);
@@ -1361,6 +1511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnDraw = document.getElementById('btn-draw');
   const btnDrawText = document.getElementById('btn-draw-text');
   const btnReset = document.getElementById('btn-reset');
+  const btnCollapse = document.getElementById('btn-collapse');
   const zoomSlider = document.getElementById('zoom-slider');
   const zoomBadge = document.getElementById('zoom-badge');
   const presetBtns = document.querySelectorAll('.preset-btn');
@@ -1376,6 +1527,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const shortcutDisplay = document.getElementById('shortcut-display');
   const footerText = document.getElementById('footer-text');
   const chkLens = document.getElementById('chk-lens');
+  const rowLens = document.getElementById('row-lens');
 
   let state = {
     zoomLevel: 200,
@@ -1393,9 +1545,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (state.shortcutCtrl) parts.push('Ctrl');
     if (state.shortcutShift) parts.push('Shift');
     if (state.shortcutAlt) parts.push('Alt');
-    parts.push(state.shortcutKey);
+    parts.push(state.shortcutKey || 'Z');
     const text = parts.join(' + ');
-
     if (shortcutDisplay) shortcutDisplay.textContent = text;
     if (footerText) footerText.textContent = \`میانبر فعال: \${text} / Esc\`;
 
@@ -1425,11 +1576,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
-      const data = await browserAPI.storage.sync.get(state);
-      if (data) state = { ...state, ...data };
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      const data = await browserAPI.storage.local.get(null);
+      if (data && data.zoomLevel !== undefined) {
+        state = { ...state, ...data };
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("ZBP Storage load error:", e);
+  }
 
   if (zoomSlider) zoomSlider.value = state.zoomLevel;
   if (zoomBadge) zoomBadge.textContent = \`\${state.zoomLevel}%\`;
@@ -1438,11 +1593,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (hexLabel) hexLabel.textContent = state.boxColor;
   if (opacitySlider) opacitySlider.value = state.opacity;
   if (opacityVal) opacityVal.textContent = \`\${state.opacity}%\`;
-  if (keyDropdown) keyDropdown.value = state.shortcutKey;
+  if (keyDropdown) keyDropdown.value = state.shortcutKey || 'Z';
+
   if (chkLens) {
     chkLens.className = \`mod-checkbox \${state.lensMode ? 'checked' : ''}\`;
     chkLens.textContent = state.lensMode ? '✓' : '';
   }
+
   updateShortcutUI();
   updatePresetsUI();
 
@@ -1450,9 +1607,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!browserAPI || !browserAPI.tabs) return null;
     try {
       let tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-      if (tabs && tabs.length > 0) return tabs[0];
+      if (tabs && tabs.length > 0) {
+        return tabs[0];
+      }
       const fallback = await browserAPI.tabs.query({ active: true, lastFocusedWindow: true });
-      return fallback && fallback[0] ? fallback[0] : null;
+      return fallback && fallback[0] ? fallback[0] : (tabs && tabs.length > 0 ? tabs[0] : null);
     } catch (e) {
       return null;
     }
@@ -1461,8 +1620,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function sendMessageToTab(message, autoClose = false) {
     const tab = await getActiveTab();
     if (!tab || !tab.id) return;
+
+    const url = tab.url || '';
+    const isRestricted = (
+      url.startsWith('chrome://') ||
+      url.startsWith('about:') ||
+      url.startsWith('moz-extension://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.includes('addons.mozilla.org') ||
+      url.includes('chromewebstore.google.com')
+    );
+
+    const notice = document.getElementById('restricted-notice');
+    if (isRestricted) {
+      if (notice) notice.style.display = 'block';
+      if (btnDrawText && message.action === 'startDrawingMode') btnDrawText.textContent = 'غیرفعال در صفحه سیستمی';
+      return;
+    } else {
+      if (notice) notice.style.display = 'none';
+    }
+
     try {
       await browserAPI.tabs.sendMessage(tab.id, message);
+      if (autoClose) {
+        setTimeout(() => window.close(), 120);
+      }
     } catch (err) {
       try {
         if (browserAPI.scripting && browserAPI.scripting.executeScript) {
@@ -1471,22 +1654,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             files: ['content.js']
           });
         }
-        await new Promise(r => setTimeout(r, 120));
+        await new Promise(r => setTimeout(r, 200));
         await browserAPI.tabs.sendMessage(tab.id, message);
-      } catch (injErr) {}
-    }
-    if (autoClose) {
-      setTimeout(() => window.close(), 60);
+        if (autoClose) {
+          setTimeout(() => window.close(), 120);
+        }
+      } catch (injErr) {
+        console.error("ZBP Injection failed:", injErr);
+      }
     }
   }
 
   async function saveSettings() {
     try {
-      if (browserAPI && browserAPI.storage && browserAPI.storage.sync) {
-        await browserAPI.storage.sync.set(state);
+      if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+        await browserAPI.storage.local.set(state);
       }
     } catch (e) {}
     sendMessageToTab({ action: 'updateSettings', settings: state }, false);
+  }
+
+  if (btnCollapse) {
+    btnCollapse.addEventListener('click', () => {
+      window.close();
+    });
   }
 
   if (btnDraw) {
@@ -1584,22 +1775,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const lensRow = document.querySelector('.lens-row');
-  if (lensRow && chkLens) {
-    lensRow.addEventListener('click', () => {
-      state.lensMode = !state.lensMode;
+  const toggleLens = () => {
+    state.lensMode = !state.lensMode;
+    if (chkLens) {
       chkLens.className = \`mod-checkbox \${state.lensMode ? 'checked' : ''}\`;
       chkLens.textContent = state.lensMode ? '✓' : '';
-      saveSettings();
-    });
+    }
+    saveSettings();
+  };
+
+  if (rowLens) {
+    rowLens.addEventListener('click', toggleLens);
+  } else if (chkLens) {
+    chkLens.addEventListener('click', toggleLens);
   }
-});`,
+});
+`,
     },
     background: {
       name: 'background.js',
-      desc: 'Cross-Browser Background Script / Service Worker',
-      code: `// background.js - اسکریپت پس‌زمینه پایدار برای موزیلا فایرفاکس (Firefox MV3) و کروم
-
+      desc: 'اسکریپت پس‌زمینه پایدار مدیریت میانبرهای کیبورد و ارتباط امن بین تب‌ها',
+      code: `// background.js - اسکریپت پس‌زمینه پایدار سازگار با موزیلا فایرفاکس و گوگل کروم (MV3)
 const browserAPI = (typeof browser !== 'undefined' && browser.runtime) ? browser : (typeof chrome !== 'undefined' ? chrome : null);
 
 if (browserAPI && browserAPI.runtime && browserAPI.runtime.onInstalled) {
@@ -1612,20 +1808,24 @@ if (browserAPI && browserAPI.runtime && browserAPI.runtime.onInstalled) {
       shortcutCtrl: true,
       shortcutShift: true,
       shortcutAlt: false,
-      extensionEnabled: true
+      extensionEnabled: true,
+      lensMode: false
     };
-
     try {
-      if (browserAPI.storage && browserAPI.storage.sync) {
-        await browserAPI.storage.sync.set(initialSettings);
+      if (browserAPI.storage && browserAPI.storage.local) {
+        const existing = await browserAPI.storage.local.get(null);
+        if (!existing || existing.zoomLevel === undefined) {
+          await browserAPI.storage.local.set(initialSettings);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("ZBP Background onInstalled storage error:", e);
+    }
   });
 }
 
 async function sendActionToActiveTab(actionName) {
   if (!browserAPI || !browserAPI.tabs) return;
-
   try {
     let tabs = [];
     try {
@@ -1633,9 +1833,22 @@ async function sendActionToActiveTab(actionName) {
     } catch (e) {
       tabs = await browserAPI.tabs.query({ active: true });
     }
-
     const activeTab = tabs && tabs[0];
     if (!activeTab || !activeTab.id) return;
+
+    // Guard against restricted URLs where content scripts cannot run
+    const url = activeTab.url || '';
+    if (
+      url.startsWith('chrome://') ||
+      url.startsWith('about:') ||
+      url.startsWith('moz-extension://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.includes('addons.mozilla.org') ||
+      url.includes('chromewebstore.google.com')
+    ) {
+      return;
+    }
 
     try {
       await browserAPI.tabs.sendMessage(activeTab.id, { action: actionName });
@@ -1646,12 +1859,16 @@ async function sendActionToActiveTab(actionName) {
             target: { tabId: activeTab.id },
             files: ['content.js']
           });
-          await new Promise(r => setTimeout(r, 120));
+          await new Promise(r => setTimeout(r, 150));
           await browserAPI.tabs.sendMessage(activeTab.id, { action: actionName });
-        } catch (injErr) {}
+        } catch (injErr) {
+          console.warn("ZBP Script injection skipped:", injErr);
+        }
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn("ZBP Background sendAction error:", err);
+  }
 }
 
 if (browserAPI && browserAPI.commands && browserAPI.commands.onCommand) {
@@ -1662,25 +1879,41 @@ if (browserAPI && browserAPI.commands && browserAPI.commands.onCommand) {
       sendActionToActiveTab('resetZoom');
     }
   });
-}`,
+}
+`,
     },
     readme: {
       name: 'README.md',
-      desc: 'Extension Documentation & Shadow DOM Multi-Browser Guide',
-      code: `# Zoom Box Pro (نسخه 8.6.0)
-افزونه زوم تمام‌صفحه با کادر موس - مجهز به لایه ایزوله کامل CSS با Shadow DOM
+      desc: 'راهنمای جامع راه‌اندازی و استفاده در موزیلا فایرفاکس، کروم، بریو و اج',
+      code: `# Zoom Box Pro (نسخه 8.6.2)
+افزونه زوم تمام‌صفحه با رسم کادر موس - مجهز به لایه ایزوله کامل CSS با Shadow DOM
 
-## ویژگی‌های نسخه 8.6.0:
-- ایزولاسیون کامل CSS با Shadow DOM (عدم تداخل استایل‌های سایتهای مختلف با کنترل‌ها و دکمه‌ها)
-- هماهنگی کامل بین تمام مرورگرها (Firefox, Chrome, Brave, Edge)
-- ترنزیشن تدریجی و کاملاً روان زوم بدون لرزش و پرش
-- میانبر کیبورد فوری: Ctrl + Shift + Z برای رسم کادر زوم، Escape برای بازگشت نرم
+## ویژگی‌های نسخه 8.6.2:
+- **ایزولاسیون کامل CSS با Shadow DOM**: بدون کوچک‌ترین تداخل با استایل‌های سایت‌های میزبان.
+- **هماهنگی کامل بین تمام مرورگرها**: فایرفاکس (Firefox MV3)، کروم (Chrome MV3)، بریو (Brave) و مایکروسافت اج (Edge).
+- **ترنزیشن تدریجی و بسیار روان**: زوم نرم و بدون پرش با شتاب‌دهنده گرافیکی GPU.
+- **میانبرهای کیبورد فوری**:
+  - \`Ctrl + Shift + Z\` (یا کلید انتخابی دلخواه): فعال‌سازی و شروع رسم کادر زوم
+  - \`Escape\`: بازگشت نرم به حالت عادی ۱۰۰٪
+  - \`+\` / \`-\` در حالت زوم: افزایش و کاهش زوم به میزان ۲۵٪
+  - درگ با کلید میانی موس (Middle Click) یا Space: حرکت و جابجایی (Pan) در حالت زوم
+- **حالت ذره‌بین (Lens HUD)**: نشانگر موقعیت‌یاب زوم هنگام حرکت ماوس.
 
-## نحوه تست در فایرفاکس (Firefox):
-1. در فایرفاکس وارد آدرس about:debugging#/runtime/this-firefox شوید.
-2. روی Load Temporary Add-on... کلیک کرده و فایل manifest.json را انتخاب کنید.
-3. یک تب جدید باز کنید و وارد سایتی مثل https://google.com یا https://wikipedia.org شوید.
-4. کلیدهای Ctrl + Shift + Z را فشار دهید یا روی آیکون افزونه در نوار ابزار بالا کلیک کنید.`,
+---
+
+## نحوه نصب در موزیلا فایرفاکس (Mozilla Firefox):
+1. مرورگر فایرفاکس را باز کرده و به آدرس \`about:debugging#/runtime/this-firefox\` بروید.
+2. روی دکمه **Load Temporary Add-on...** کلیک کنید.
+3. فایل \`manifest.json\` را از داخل پوشه اکسترکت‌شده انتخاب کنید.
+4. وارد یک وب‌سایت (مانند Wikipedia یا Google) شده و از کلید \`Ctrl + Shift + Z\` استفاده نمایید!
+
+---
+
+## نحوه نصب در گوگل کروم، بریو و اج (Chrome / Brave / Edge):
+1. مرورگر را باز کرده و به آدرس \`chrome://extensions\` بروید.
+2. گزینه **Developer mode** را در بالا سمت راست فعال کنید.
+3. در صورت نیاز فایل \`manifest-chrome.json\` را به عنوان \`manifest.json\` قرار دهید یا روی **Load unpacked** کلیک کرده و پوشه افزونه را انتخاب کنید.
+`,
     },
   };
 
@@ -1736,7 +1969,7 @@ if (browserAPI && browserAPI.commands && browserAPI.commands.onCommand) {
       const url = URL.createObjectURL(zipContent);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'zoom-box-pro-v8.6.0.zip';
+      a.download = 'zoom-box-pro-v8.6.2.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
