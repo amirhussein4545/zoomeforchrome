@@ -7,6 +7,10 @@ export interface ZoomSettings {
   extensionEnabled: boolean;
   lensMode: boolean; // Optional magnifier lens mode
   lensSize: number;  // Lens diameter in px (e.g. 180)
+  shortcutKey: string; // e.g. 'Z'
+  shortcutCtrl: boolean;
+  shortcutShift: boolean;
+  shortcutAlt: boolean;
 }
 
 export interface SelectionRect {
@@ -26,8 +30,8 @@ export interface ZoomedRegion {
   width: number;
   height: number;
   scale: number;
-  elementHtml?: string;
-  sourceRect?: DOMRect;
+  originX: number;
+  originY: number;
 }
 
 export type SandboxTab = 'sandbox' | 'custom' | 'extension-files' | 'guide';

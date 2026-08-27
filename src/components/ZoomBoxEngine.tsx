@@ -21,6 +21,8 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [selection, setSelection] = useState<SelectionRect | null>(null);
   const [zoomedRegion, setZoomedRegion] = useState<ZoomedRegion | null>(null);
+  const [lastOrigin, setLastOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isExitingZoom, setIsExitingZoom] = useState<boolean>(false);
   const [lensPos, setLensPos] = useState<{ x: number; y: number } | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -51,14 +53,19 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
     setIsActive(false);
     setIsDrawing(false);
     setSelection(null);
+    setIsExitingZoom(true);
     setZoomedRegion(null);
+
+    setTimeout(() => {
+      setIsExitingZoom(false);
+    }, 650);
   }, []);
 
   const resetZoom = useCallback(() => {
     deactivateZoomMode();
     onUpdateSettings({ zoomLevel: 100 });
     showToast(
-      lang === 'fa' ? 'زوم به 100% بازگشت' : 'Zoom reset to 100%',
+      lang === 'fa' ? 'زوم با انیمیشن نرم به حالت عادی (۱۰۰٪) بازگشت' : 'Smoothly zoomed out to 100%',
       'info'
     );
   }, [deactivateZoomMode, onUpdateSettings, lang, showToast]);
@@ -66,19 +73,20 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
   // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Shift+Z or Cmd+Shift+Z: Toggle Zoom Mode
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'Z' || e.key === 'z')) {
+      const targetKey = settings.shortcutKey || 'Z';
+      const matchesKey = e.key.toUpperCase() === targetKey.toUpperCase() || e.code === `Key${targetKey.toUpperCase()}`;
+      const matchesCtrl = (e.ctrlKey || e.metaKey) === (settings.shortcutCtrl ?? true);
+      const matchesShift = e.shiftKey === (settings.shortcutShift ?? true);
+      const matchesAlt = e.altKey === (settings.shortcutAlt ?? false);
+
+      // Custom configurable shortcut: Toggle Zoom Mode
+      if (matchesKey && matchesCtrl && matchesShift && matchesAlt) {
         e.preventDefault();
         if (isActive) {
           deactivateZoomMode();
         } else {
           activateZoomMode();
         }
-      }
-      // Ctrl+Shift+R or Cmd+Shift+R: Reset Zoom
-      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
-        e.preventDefault();
-        resetZoom();
       }
       // Escape: Exit Zoom
       else if (e.key === 'Escape') {
@@ -91,7 +99,7 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isActive, zoomedRegion, activateZoomMode, deactivateZoomMode, resetZoom, lang, showToast]);
+  }, [isActive, zoomedRegion, activateZoomMode, deactivateZoomMode, resetZoom, lang, showToast, settings.shortcutKey, settings.shortcutCtrl, settings.shortcutShift, settings.shortcutAlt]);
 
   // Mouse & Touch Selection Event Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -145,19 +153,25 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
 
     if (selection.width > 25 && selection.height > 25) {
       const scale = settings.zoomLevel / 100;
+      const originX = selection.left + selection.width / 2 + window.scrollX;
+      const originY = selection.top + selection.height / 2 + window.scrollY;
+
+      setLastOrigin({ x: originX, y: originY });
       setZoomedRegion({
         left: selection.left,
         top: selection.top,
         width: selection.width,
         height: selection.height,
         scale,
+        originX,
+        originY,
       });
 
       setIsDrawing(false);
       showToast(
         lang === 'fa'
-          ? `زوم ${settings.zoomLevel}% اعمال شد`
-          : `Zoom ${settings.zoomLevel}% applied!`,
+          ? `زوم کامل صفحه ${settings.zoomLevel}% روی ناحیه اعمال شد`
+          : `Full-page zoom ${settings.zoomLevel}% applied to selected region!`,
         'success'
       );
     }
@@ -197,8 +211,20 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
         isActive && isDrawing ? 'cursor-crosshair select-none' : ''
       }`}
     >
-      {/* Target Content */}
-      <div id="zoom-target-content" className="w-full">
+      {/* Target Content with Full-Page Transform Zoom & Smooth Zoom-Out */}
+      <div 
+        id="zoom-target-content" 
+        className="w-full will-change-transform"
+        style={{
+          transform: zoomedRegion ? `scale(${settings.zoomLevel / 100})` : 'scale(1)',
+          transformOrigin: zoomedRegion
+            ? `${zoomedRegion.originX}px ${zoomedRegion.originY}px`
+            : lastOrigin.x !== 0
+            ? `${lastOrigin.x}px ${lastOrigin.y}px`
+            : 'center center',
+          transition: 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+      >
         {children}
       </div>
 
@@ -217,7 +243,7 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
       {selection && selection.width > 2 && (
         <div
           id="zoom-selection-box"
-          className="fixed z-[999985] pointer-events-none transition-none shadow-2xl"
+          className="fixed z-[999985] pointer-events-none transition-all duration-75 ease-out shadow-2xl"
           style={{
             left: `${selection.left}px`,
             top: `${selection.top}px`,
@@ -239,95 +265,48 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
         </div>
       )}
 
-      {/* Active Zoom Window / Pop-out Magnifier */}
+      {/* Full-Page Zoom Active Floating Bar */}
       {zoomedRegion && (
         <div
-          id="zoom-active-window"
-          className="fixed z-[999988] bg-zinc-950 rounded-xl overflow-hidden border-2 shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200"
-          style={{
-            left: `${Math.min(window.innerWidth - 380, Math.max(20, zoomedRegion.left))}px`,
-            top: `${Math.min(window.innerHeight - 380, Math.max(20, zoomedRegion.top - 10))}px`,
-            width: `${Math.max(280, Math.min(600, zoomedRegion.width * 1.5))}px`,
-            height: `${Math.max(220, Math.min(500, zoomedRegion.height * 1.5 + 40))}px`,
-            borderColor: settings.boxColor,
-            boxShadow: `0 20px 50px rgba(0,0,0,0.8), 0 0 30px ${hexToRgba(settings.boxColor, 0.4)}`,
-          }}
+          id="zoom-full-status-bar"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999988] bg-zinc-950 border-2 rounded-full px-5 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex items-center gap-4 text-xs font-mono animate-in fade-in slide-in-from-bottom-6 duration-200"
+          style={{ borderColor: settings.boxColor }}
         >
-          {/* Zoom Window Header */}
-          <div
-            className="px-3 py-1.5 flex items-center justify-between border-b border-zinc-800 text-xs font-semibold select-none cursor-move"
-            style={{
-              backgroundColor: 'rgba(10, 10, 12, 0.95)',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: settings.boxColor }}
-              />
-              <span className="font-mono text-zinc-200 text-[11px]">
-                {lang === 'fa' ? 'نمای بزرگ‌نمایی شده' : 'Zoomed View'} ({settings.zoomLevel}%)
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onUpdateSettings({ zoomLevel: Math.max(50, settings.zoomLevel - 25) })}
-                className="p-1 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => onUpdateSettings({ zoomLevel: Math.min(500, settings.zoomLevel + 25) })}
-                className="p-1 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={handleCopySnapshot}
-                className="p-1 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
-                title="Copy Details"
-              >
-                {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                onClick={deactivateZoomMode}
-                className="p-1 text-zinc-400 hover:text-rose-400 rounded hover:bg-zinc-800 transition-colors"
-                title="Close Zoom"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: settings.boxColor }} />
+            <span className="text-white font-bold">
+              {lang === 'fa' ? `زوم کامل صفحه (${settings.zoomLevel}%)` : `Full-Page Zoom (${settings.zoomLevel}%)`}
+            </span>
           </div>
 
-          {/* Zoom Window Content Viewport */}
-          <div className="relative flex-1 overflow-hidden bg-zinc-900 flex items-center justify-center p-2">
-            <div
-              className="relative transition-transform duration-100 ease-out origin-center select-none"
-              style={{
-                transform: `scale(${settings.zoomLevel / 100})`,
+          <div className="flex items-center gap-2 border-l border-zinc-800 pl-4">
+            <button
+              onClick={() => {
+                const newLevel = Math.max(50, settings.zoomLevel - 25);
+                onUpdateSettings({ zoomLevel: newLevel });
+                setZoomedRegion(prev => prev ? { ...prev, scale: newLevel / 100 } : null);
               }}
+              className="px-2 py-1 bg-zinc-900 rounded border border-zinc-700 text-zinc-300 hover:text-white cursor-pointer"
             >
-              {/* Scaled mirror of target area */}
-              <div
-                className="rounded border border-zinc-700 bg-zinc-950 p-4 text-zinc-100 shadow-inner max-w-sm text-center"
-                style={{
-                  minWidth: `${zoomedRegion.width}px`,
-                  minHeight: `${zoomedRegion.height}px`,
-                }}
-              >
-                <div className="text-[11px] font-mono text-[#39FF14] mb-1 font-bold">
-                  ★ MAGNIFIED REGION ({Math.round(zoomedRegion.width)}×{Math.round(zoomedRegion.height)}px)
-                </div>
-                <div className="text-xs text-zinc-300">
-                  {lang === 'fa' 
-                    ? 'بزرگ‌نمایی با شفافیت و دقت بالا روی کادر انتخابی اعمال شد.'
-                    : 'Pixel-crisp magnification dynamically projected for this region.'}
-                </div>
-              </div>
-            </div>
+              -
+            </button>
+            <span className="text-[#39FF14] font-bold">{settings.zoomLevel}%</span>
+            <button
+              onClick={() => {
+                const newLevel = Math.min(500, settings.zoomLevel + 25);
+                onUpdateSettings({ zoomLevel: newLevel });
+                setZoomedRegion(prev => prev ? { ...prev, scale: newLevel / 100 } : null);
+              }}
+              className="px-2 py-1 bg-zinc-900 rounded border border-zinc-700 text-zinc-300 hover:text-white cursor-pointer"
+            >
+              +
+            </button>
+            <button
+              onClick={deactivateZoomMode}
+              className="ml-2 px-3 py-1 bg-[#39FF14] text-black font-bold rounded-full hover:bg-white transition-colors cursor-pointer"
+            >
+              {lang === 'fa' ? 'بازنشانی (Reset)' : 'Reset 100%'}
+            </button>
           </div>
         </div>
       )}

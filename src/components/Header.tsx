@@ -1,5 +1,5 @@
 import React from 'react';
-import { ZoomIn, BookOpen, TrendingUp, Cpu, Code, Image as ImageIcon, FileCode2, Globe, Sparkles } from 'lucide-react';
+import { ZoomIn, BookOpen, TrendingUp, Cpu, Code, Image as ImageIcon, FileCode2, Globe, Sparkles, Chrome } from 'lucide-react';
 import { SampleContentType, SandboxTab } from '../types';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   onSelectSample: (sample: SampleContentType) => void;
   lang: 'fa' | 'en';
   onToggleLang: () => void;
+  onOpenInstallModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectSample,
   lang,
   onToggleLang,
+  onOpenInstallModal,
 }) => {
   const sampleTabs: { id: SampleContentType; labelEn: string; labelFa: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'article', labelEn: 'Research Paper', labelFa: 'مقاله علمی', icon: BookOpen },
@@ -99,10 +101,18 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right Tools & Language Switcher */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenInstallModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/50 text-xs font-bold text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all cursor-pointer shadow-[0_0_10px_rgba(57,255,20,0.2)]"
+          >
+            <Chrome className="w-3.5 h-3.5" />
+            <span>{lang === 'fa' ? 'راهنمای نصب کروم' : 'Install Guide'}</span>
+          </button>
+
           <button
             onClick={onToggleLang}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white hover:border-[#39FF14] transition-all cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white hover:border-[#39FF14] transition-all cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5 text-[#39FF14]" />
             <span className="font-mono">{lang === 'fa' ? 'فارسی / EN' : 'English / فا'}</span>

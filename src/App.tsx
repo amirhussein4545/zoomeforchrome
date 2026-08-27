@@ -8,6 +8,7 @@ import { BlueprintView } from './components/TestPages/BlueprintView';
 import { CodeDiffView } from './components/TestPages/CodeDiffView';
 import { CustomContentView } from './components/TestPages/CustomContentView';
 import { ExtensionViewer } from './components/ExtensionViewer';
+import { InstallModal } from './components/InstallModal';
 import { MousePointerClick, ShieldCheck, Zap, Info } from 'lucide-react';
 
 const STORAGE_KEY = 'zoom_box_pro_settings_v8';
@@ -16,6 +17,7 @@ export function App() {
   const [lang, setLang] = useState<'fa' | 'en'>('fa');
   const [currentTab, setCurrentTab] = useState<SandboxTab>('sandbox');
   const [currentSample, setCurrentSample] = useState<SampleContentType>('article');
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   const [settings, setSettings] = useState<ZoomSettings>(() => {
     try {
@@ -35,6 +37,10 @@ export function App() {
       extensionEnabled: true,
       lensMode: false,
       lensSize: 180,
+      shortcutKey: 'Z',
+      shortcutCtrl: true,
+      shortcutShift: true,
+      shortcutAlt: false,
     };
   });
 
@@ -71,6 +77,7 @@ export function App() {
           onSelectSample={setCurrentSample}
           lang={lang}
           onToggleLang={toggleLanguage}
+          onOpenInstallModal={() => setIsInstallModalOpen(true)}
         />
 
         {/* Quick Instructions / Shortcut Banner */}
@@ -132,6 +139,13 @@ export function App() {
               : 'Built for Chrome with Manifest V3 support, matrix3d hardware-accelerated transformation, and local sync.'}
           </p>
         </footer>
+
+        {/* Visual Install Modal */}
+        <InstallModal
+          isOpen={isInstallModalOpen}
+          onClose={() => setIsInstallModalOpen(false)}
+          lang={lang}
+        />
       </ZoomBoxEngine>
     </div>
   );

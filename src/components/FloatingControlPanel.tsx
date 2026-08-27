@@ -83,7 +83,19 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
     overlayOpacity: lang === 'fa' ? 'شفافیت پس‌زمینه:' : 'Overlay Dimming:',
     presets: lang === 'fa' ? 'مقادیر سریع:' : 'Quick Presets:',
     lensMode: lang === 'fa' ? 'حالت ذره‌بین (Lens)' : 'Magnifier Lens Mode',
-    shortcutsHint: lang === 'fa' ? 'کلید میانبر: Ctrl+Shift+Z / Esc' : 'Shortcuts: Ctrl+Shift+Z / Esc',
+    shortcutsConfig: lang === 'fa' ? 'تنظیم کلید میانبر' : 'Custom Shortcut',
+    keyPrompt: lang === 'fa' ? 'کلید میانبر فعال‌سازی:' : 'Activation Shortcut:',
+    shortcutsHint: lang === 'fa' ? `میانبر فعال: ${[
+      settings.shortcutCtrl ? 'Ctrl' : '',
+      settings.shortcutShift ? 'Shift' : '',
+      settings.shortcutAlt ? 'Alt' : '',
+      settings.shortcutKey || 'Z'
+    ].filter(Boolean).join(' + ')} / Esc` : `Shortcut: ${[
+      settings.shortcutCtrl ? 'Ctrl' : '',
+      settings.shortcutShift ? 'Shift' : '',
+      settings.shortcutAlt ? 'Alt' : '',
+      settings.shortcutKey || 'Z'
+    ].filter(Boolean).join(' + ')} / Esc`,
   };
 
   if (!settings.showPanel) return null;
@@ -224,6 +236,64 @@ export const FloatingControlPanel: React.FC<FloatingControlPanelProps> = ({
                 onChange={(e) => onUpdateSettings({ opacity: parseInt(e.target.value, 10) })}
                 className="w-full h-1.5 mt-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#87CEEB]"
               />
+            </div>
+          </div>
+
+          {/* Keyboard Shortcut Customization UI */}
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-zinc-800/80 text-[11px]">
+            <div className="flex items-center justify-between text-[#87CEEB] font-medium">
+              <span>{t.shortcutsConfig}</span>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-[#39FF14]">
+                {[
+                  settings.shortcutCtrl ? 'Ctrl' : '',
+                  settings.shortcutShift ? 'Shift' : '',
+                  settings.shortcutAlt ? 'Alt' : '',
+                  settings.shortcutKey || 'Z'
+                ].filter(Boolean).join(' + ')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1 bg-zinc-900/60 p-1.5 rounded-lg border border-zinc-800">
+              <label className="flex items-center gap-1 text-[10px] text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.shortcutCtrl ?? true}
+                  onChange={(e) => onUpdateSettings({ shortcutCtrl: e.target.checked })}
+                  className="accent-[#39FF14] w-3 h-3 cursor-pointer"
+                />
+                <span>Ctrl</span>
+              </label>
+              <label className="flex items-center gap-1 text-[10px] text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.shortcutShift ?? true}
+                  onChange={(e) => onUpdateSettings({ shortcutShift: e.target.checked })}
+                  className="accent-[#39FF14] w-3 h-3 cursor-pointer"
+                />
+                <span>Shift</span>
+              </label>
+              <label className="flex items-center gap-1 text-[10px] text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.shortcutAlt ?? false}
+                  onChange={(e) => onUpdateSettings({ shortcutAlt: e.target.checked })}
+                  className="accent-[#39FF14] w-3 h-3 cursor-pointer"
+                />
+                <span>Alt</span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 mt-0.5">
+              <span className="text-zinc-400 text-[10px]">{t.keyPrompt}</span>
+              <select
+                value={settings.shortcutKey || 'Z'}
+                onChange={(e) => onUpdateSettings({ shortcutKey: e.target.value })}
+                className="bg-black text-[#39FF14] border border-[#87CEEB]/60 rounded px-2 py-0.5 text-xs font-mono font-bold cursor-pointer"
+              >
+                {['Z', 'X', 'C', 'V', 'A', 'S', 'F', 'Q', 'E', 'R', 'B', 'K', 'L', '1', '2', '3'].map((k) => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
             </div>
           </div>
 
