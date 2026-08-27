@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoom Box Pro</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Vazirmatn, Tahoma, sans-serif;
+    }
+
+    body {
+      width: 300px;
+      background-color: #09090b;
+      color: #f4f4f5;
+      padding: 16px;
+      user-select: none;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #27272a;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #39FF14;
+    }
+
+    .badge {
+      font-size: 10px;
+      background: #27272a;
+      color: #a1a1aa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      direction: ltr;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary {
+      background: #39FF14;
+      color: #09090b;
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: #2ecc71;
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
+    }
+
+    .btn-secondary {
+      background: #18181b;
+      color: #e4e4e7;
+      border: 1px solid #27272a;
+    }
+
+    .btn-secondary:hover {
+      background: #27272a;
+      color: #ffffff;
+    }
+
+    .btn-reset {
+      background: #18181b;
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .btn-reset:hover {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: #f43f5e;
+    }
+
+    .section {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #a1a1aa;
+      margin-bottom: 8px;
+    }
+
+    .slider-val {
+      font-weight: 700;
+      color: #39FF14;
+      font-size: 13px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #39FF14;
+      cursor: pointer;
+      height: 4px;
+      background: #27272a;
+      border-radius: 2px;
+    }
+
+    .footer-tip {
+      font-size: 11px;
+      color: #71717a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid #27272a;
+    }
+
+    .kbd {
+      background: #27272a;
+      color: #e4e4e7;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      direction: ltr;
+      border: 1px solid #3f3f46;
+    }
+
+    .msg-box {
+      display: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      margin-bottom: 10px;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-title">
+      <span>🔍</span>
+      <span>Zoom Box Pro</span>
+    </div>
+    <span class="badge">v8.4.0</span>
+  </div>
+
+  <div id="restricted-notice" class="msg-box">
+    ⚠️ این صفحه سیستمی مرورگر است. لطفاً افزونه را روی یک وب‌سایت عادی (مانند گوگل یا ویکی‌پدیا) اجرا نمایید.
+  </div>
+
+  <button id="btn-draw" class="btn btn-primary">
+    <span>✏️</span>
+    <span>شروع انتخاب و رسم کادر زوم</span>
+  </button>
+
+  <button id="btn-toggle-panel" class="btn btn-secondary">
+    <span>📌</span>
+    <span>نمایش / پنهان کردن پنل در صفحه</span>
+  </button>
+
+  <div class="section">
+    <div class="slider-row">
+      <span>میزان بزرگ‌نمایی:</span>
+      <span id="zoom-value" class="slider-val">200%</span>
+    </div>
+    <input type="range" id="zoom-slider" min="125" max="500" step="25" value="200">
+  </div>
+
+  <button id="btn-reset" class="btn btn-reset">
+    <span>🔄</span>
+    <span>بازگشت نرم به حالت عادی (100%)</span>
+  </button>
+
+  <div class="footer-tip">
+    <span>کلید میانبر سریع:</span>
+    <span class="kbd">Ctrl + Shift + Z</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
