@@ -1,6 +1,0 @@
-{
-  "name": "Zoom Box Pro",
-  "description": "Interactive Web Application and Sandbox for Zoom Box Pro Chrome Extension",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

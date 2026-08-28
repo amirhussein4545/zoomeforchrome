@@ -1,6 +1,6 @@
 import React from 'react';
 import { ZoomSettings } from '../types';
-import { ChevronDown, ChevronUp, Search, RotateCcw, Eye, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, Check } from 'lucide-react';
 
 interface FloatingControlPanelProps {
   settings: ZoomSettings;

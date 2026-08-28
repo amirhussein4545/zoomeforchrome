@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Vazirmatn", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, Tahoma, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+ * Animation utilities
+ * جایگزین کلاس‌های پلاگین خارجی (animate-in / fade-in / ...) که نصب نبودند
+ * و بدون آن‌ها هیچ انیمیشنی اجرا نمی‌شد.
+ * ------------------------------------------------------------------------- */
+@keyframes zbp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zbp-pop-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes zbp-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.zbp-anim-fade {
+  animation: zbp-fade-in 0.2s ease-out both;
+}
+
+.zbp-anim-pop {
+  animation: zbp-pop-in 0.15s ease-out both;
+}
+
+.zbp-anim-slide-up {
+  animation: zbp-slide-up 0.2s ease-out both;
+}

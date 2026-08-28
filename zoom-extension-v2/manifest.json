@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Zoom Box Pro - زوم حرفه‌ای صفحه",
-  "version": "8.6.0",
-  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با رسم کادر انتخابی و انیمیشن روان - سازگار کامل با فایرفاکس، کروم، بریو و اج",
+  "version": "8.7.0",
+  "description": "افزونه زوم حرفه‌ای تمام‌صفحه با رسم کادر انتخابی و انیمیشن روان - بهینه‌سازی‌شده مخصوص فایرفاکس، سازگار با کروم، بریو و اج",
   "browser_specific_settings": {
     "gecko": {
       "id": "zoomboxpro@firefox.extension",
-      "strict_min_version": "109.0"
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   },
   "permissions": [
@@ -27,7 +32,9 @@
     }
   },
   "background": {
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
   },
   "commands": {
     "toggle-draw": {
@@ -47,8 +54,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end",
       "all_frames": false
     }

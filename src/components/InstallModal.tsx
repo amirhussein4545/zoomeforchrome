@@ -8,7 +8,7 @@ interface Props {
 }
 
 export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
-  const [activeBrowser, setActiveBrowser] = useState<'chrome' | 'firefox'>('chrome');
+  const [activeBrowser, setActiveBrowser] = useState<'firefox' | 'chrome'>('firefox');
 
   if (!isOpen) return null;
 
@@ -87,7 +87,7 @@ export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const currentSteps = activeBrowser === 'chrome' ? chromeSteps : firefoxSteps;
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md zbp-anim-fade">
       <div 
         className="bg-zinc-950 border-2 border-[#39FF14] rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-[0_0_50px_rgba(57,255,20,0.3)] relative text-zinc-100 max-h-[90vh] overflow-y-auto"
         dir={lang === 'fa' ? 'rtl' : 'ltr'}
@@ -122,17 +122,6 @@ export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
         {/* Browser Switcher Tabs */}
         <div className="flex gap-2 p-1 bg-zinc-900 border border-zinc-800 rounded-xl mb-4">
           <button
-            onClick={() => setActiveBrowser('chrome')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
-              activeBrowser === 'chrome'
-                ? 'bg-[#39FF14] text-black shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-            }`}
-          >
-            <Chrome className="w-4 h-4" />
-            <span>Google Chrome / Brave / Edge</span>
-          </button>
-          <button
             onClick={() => setActiveBrowser('firefox')}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
               activeBrowser === 'firefox'
@@ -142,6 +131,17 @@ export const InstallModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
           >
             <Flame className="w-4 h-4 text-orange-300" />
             <span>Mozilla Firefox</span>
+          </button>
+          <button
+            onClick={() => setActiveBrowser('chrome')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+              activeBrowser === 'chrome'
+                ? 'bg-[#39FF14] text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+          >
+            <Chrome className="w-4 h-4" />
+            <span>Google Chrome / Brave / Edge</span>
           </button>
         </div>
 
