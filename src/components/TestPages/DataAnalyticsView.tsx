@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, ArrowUpRight, ArrowDownRight, Activity, DollarSign } from 'lucide-react';
+import { TrendingUp, ArrowUpRight, Activity, DollarSign } from 'lucide-react';
 
 interface Props {
   lang: 'fa' | 'en';

@@ -9,111 +9,99 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Vazirmatn, Tahoma, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
     }
-
     body {
       width: 320px;
-      background: #090d0b;
-      color: #f4f4f5;
       padding: 14px;
-      user-select: none;
-      border: 2px solid #39FF14;
-      border-radius: 18px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(57, 255, 20, 0.2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Vazirmatn, Tahoma, sans-serif;
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-size: 13px;
+      line-height: 1.4;
+      direction: rtl;
     }
-
     .header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(39, 39, 42, 0.8);
-      padding-bottom: 10px;
+      align-items: center;
       margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(39, 39, 42, 0.8);
     }
-
     .header-title {
+      font-weight: 800;
+      font-size: 13px;
+      color: #38bdf8;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #7dd3fc;
+      gap: 6px;
     }
-
     .status-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #39FF14;
-      box-shadow: 0 0 10px #39FF14;
+      box-shadow: 0 0 8px #39FF14;
       display: inline-block;
     }
-
     .header-btn {
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      border: 1px solid rgba(56, 189, 248, 0.8);
-      background: #000000;
-      color: #39FF14;
-      font-size: 13px;
-      font-weight: 700;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      color: #a1a1aa;
       cursor: pointer;
-      transition: all 0.2s ease;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
     .header-btn:hover {
-      background: rgba(56, 189, 248, 0.2);
+      color: #39FF14;
+      border-color: #39FF14;
     }
-
     .btn-main {
       width: 100%;
       padding: 10px 14px;
-      border-radius: 12px;
-      font-weight: 700;
+      border-radius: 10px;
       font-size: 13px;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all 0.2s ease;
       margin-bottom: 8px;
+      transition: all 0.2s ease;
     }
-
     .btn-activate {
       background: #000000;
       color: #39FF14;
-      border: 2px solid #38bdf8;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+      border: 2px solid #39FF14;
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.25);
     }
     .btn-activate:hover {
-      background: rgba(56, 189, 248, 0.15);
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+      background: rgba(57, 255, 20, 0.15);
+      box-shadow: 0 0 18px rgba(57, 255, 20, 0.45);
     }
-
     .btn-reset {
-      background: #140507;
+      background: #09090b;
       color: #fb7185;
-      border: 1.5px solid rgba(225, 29, 72, 0.8);
-      padding: 8px 14px;
+      border: 1px solid rgba(225, 29, 72, 0.6);
     }
     .btn-reset:hover {
-      background: rgba(225, 29, 72, 0.2);
+      background: rgba(225, 29, 72, 0.15);
+      border-color: #fb7185;
       color: #ffffff;
     }
-
     .presets-wrap {
-      margin-top: 4px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .presets-label {
       font-size: 11px;
-      font-weight: 700;
       color: #7dd3fc;
+      font-weight: 700;
       margin-bottom: 6px;
       display: block;
     }
@@ -123,13 +111,14 @@
       gap: 6px;
     }
     .preset-btn {
-      padding: 6px 0;
-      border-radius: 8px;
-      border: 1px solid #3f3f46;
       background: #18181b;
-      color: #f4f4f5;
-      font-size: 11px;
+      border: 1px solid #3f3f46;
+      color: #d4d4d8;
+      border-radius: 8px;
+      padding: 6px 0;
+      font-family: monospace;
       font-weight: 700;
+      font-size: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
@@ -139,13 +128,12 @@
     }
     .preset-btn.active {
       border-color: #39FF14;
-      background: rgba(57, 255, 20, 0.15);
+      background: rgba(57, 255, 20, 0.18);
       color: #39FF14;
-      box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.35);
     }
-
     .slider-section {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .slider-header {
       display: flex;
@@ -162,22 +150,20 @@
       font-family: monospace;
       font-weight: 700;
       font-size: 11px;
-      padding: 2px 7px;
+      padding: 2px 8px;
       border-radius: 6px;
       background: rgba(57, 255, 20, 0.15);
       border: 1px solid rgba(57, 255, 20, 0.5);
       color: #39FF14;
     }
-
     input[type="range"] {
       width: 100%;
-      accent-color: #ffffff;
+      accent-color: #39FF14;
       cursor: pointer;
-      height: 4px;
+      height: 5px;
       background: #27272a;
-      border-radius: 2px;
+      border-radius: 3px;
     }
-
     .two-cols {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -201,11 +187,15 @@
     }
     .color-preview-btn {
       width: 36px;
-      height: 32px;
+      height: 30px;
       border-radius: 8px;
       border: 2px solid rgba(255, 255, 255, 0.6);
       background: #39FF14;
       cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .color-preview-btn:hover {
+      transform: scale(1.05);
     }
     .hex-code {
       font-family: monospace;
@@ -214,7 +204,6 @@
       font-weight: 600;
       text-transform: uppercase;
     }
-
     .shortcut-box {
       border-top: 1px solid rgba(39, 39, 42, 0.8);
       padding-top: 8px;
@@ -273,7 +262,6 @@
       background: #39FF14;
       border-color: #39FF14;
     }
-
     .key-select-row {
       display: flex;
       justify-content: space-between;
@@ -295,7 +283,6 @@
       font-size: 12px;
       cursor: pointer;
     }
-
     .lens-row {
       border-top: 1px solid rgba(39, 39, 42, 0.8);
       padding-top: 8px;
@@ -303,6 +290,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
     }
     .lens-title {
       display: flex;
@@ -312,7 +300,6 @@
       font-weight: 700;
       color: #f4f4f5;
     }
-
     .footer-text {
       text-align: center;
       font-family: monospace;
@@ -320,7 +307,6 @@
       color: #a1a1aa;
       padding-top: 4px;
     }
-
     .restricted-msg {
       display: none;
       padding: 6px 10px;
@@ -341,7 +327,7 @@
       <span class="status-dot"></span>
       <span>تنظیمات زوم (Zoom Box Pro)</span>
     </div>
-    <button id="btn-collapse" class="header-btn" title="بستن">^</button>
+    <button type="button" id="btn-collapse" class="header-btn" title="بستن">✕</button>
   </div>
 
   <div id="restricted-notice" class="restricted-msg">
@@ -349,24 +335,24 @@
   </div>
 
   <!-- Action Buttons -->
-  <button id="btn-draw" class="btn-main btn-activate">
+  <button type="button" id="btn-draw" class="btn-main btn-activate">
     <span>🔍</span>
-    <span id="btn-draw-text">فعال کردن زوم</span>
+    <span id="btn-draw-text">شروع رسم کادر زوم</span>
   </button>
 
-  <button id="btn-reset" class="btn-main btn-reset">
-    <span>🔄 ❌</span>
-    <span>بازگشت به 100%</span>
+  <button type="button" id="btn-reset" class="btn-main btn-reset">
+    <span>🔄</span>
+    <span>بازگشت به ۱۰۰٪ (Esc)</span>
   </button>
 
   <!-- Quick Presets -->
   <div class="presets-wrap">
     <span class="presets-label">مقادیر سریع:</span>
     <div class="presets-grid">
-      <button class="preset-btn" data-val="150">150%</button>
-      <button class="preset-btn active" data-val="200">200%</button>
-      <button class="preset-btn" data-val="300">300%</button>
-      <button class="preset-btn" data-val="400">400%</button>
+      <button type="button" class="preset-btn" data-val="150">150%</button>
+      <button type="button" class="preset-btn active" data-val="200">200%</button>
+      <button type="button" class="preset-btn" data-val="300">300%</button>
+      <button type="button" class="preset-btn" data-val="400">400%</button>
     </div>
   </div>
 
@@ -384,14 +370,14 @@
     <div>
       <span class="col-header">رنگ کادر:</span>
       <div class="color-picker-box">
-        <button id="color-preview" class="color-preview-btn"></button>
+        <button type="button" id="color-preview" class="color-preview-btn"></button>
         <input type="color" id="color-input" value="#39FF14" style="display:none;">
         <span id="hex-label" class="hex-code">#39FF14</span>
       </div>
     </div>
     <div>
       <div class="col-header">
-        <span>شفافیت پس‌زمینه:</span>
+        <span>تیرگی پس‌زمینه:</span>
         <span id="opacity-val" style="color:#d4d4d8;font-family:monospace;">50%</span>
       </div>
       <input type="range" id="opacity-slider" min="0" max="95" step="5" value="50" style="margin-top:6px;">
@@ -404,6 +390,7 @@
       <span class="slider-title">تنظیم کلید میانبر</span>
       <span id="shortcut-display" class="shortcut-badge">Ctrl + Shift + Z</span>
     </div>
+
     <div class="modifiers-container">
       <div class="mod-item" id="mod-ctrl">
         <span>Ctrl</span>
@@ -418,8 +405,9 @@
         <div class="mod-checkbox" id="chk-alt"></div>
       </div>
     </div>
+
     <div class="key-select-row">
-      <span class="key-select-label">کلید میانبر فعال‌سازی:</span>
+      <span class="key-select-label">کلید فعال‌سازی:</span>
       <select id="key-dropdown" class="key-dropdown">
         <option value="Z">Z</option>
         <option value="X">X</option>
@@ -437,12 +425,12 @@
   </div>
 
   <!-- Lens Mode -->
-  <div class="lens-row">
+  <div class="lens-row" id="row-lens">
     <div class="lens-title">
       <span style="color:#39FF14;">👁️</span>
-      <span>حالت ذره‌بین (Lens)</span>
+      <span>حالت نشانگر ذره‌بین (Lens HUD)</span>
     </div>
-    <div class="mod-checkbox" id="chk-lens" style="cursor:pointer;"></div>
+    <div class="mod-checkbox" id="chk-lens"></div>
   </div>
 
   <!-- Footer -->

@@ -1,7 +1,7 @@
 {
   "name": "zoom-box-pro",
   "private": true,
-  "version": "8.0.0",
+  "version": "8.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
@@ -10,25 +10,19 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
-    "@types/webextension-polyfill": "^0.12.5",
-    "clsx": "^2.1.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
-    "motion": "^12.4.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwind-merge": "^3.0.1",
-    "webextension-polyfill": "^0.12.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.6",
-    "@types/jszip": "^3.4.1",
-    "@types/node": "^22.13.4",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.0.6",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
-  }
+  },
+  "description": "Zoom Box Pro - Firefox-optimized full-page zoom extension + interactive sandbox"
 }

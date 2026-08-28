@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image as ImageIcon, Type, Upload, RefreshCw, Sparkles, ExternalLink } from 'lucide-react';
+import { Image as ImageIcon, Type, Upload, Sparkles } from 'lucide-react';
 
 interface Props {
   lang: 'fa' | 'en';

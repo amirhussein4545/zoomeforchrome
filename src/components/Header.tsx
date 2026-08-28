@@ -41,11 +41,11 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm sm:text-base text-white tracking-tight">Zoom Box Pro</span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/40 font-semibold">
-                  v8.0.0
+                  v8.7.0
                 </span>
               </div>
               <p className="text-[10px] text-zinc-400">
-                {lang === 'fa' ? 'افزونه زوم حرفه‌ای صفحه با کادر شناور' : 'Chrome Extension Interactive Web Sandbox'}
+                {lang === 'fa' ? 'افزونه زوم حرفه‌ای صفحه با کادر شناور' : 'Firefox Extension Interactive Web Sandbox'}
               </p>
             </div>
           </div>
@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/50 text-xs font-bold text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all cursor-pointer shadow-[0_0_10px_rgba(57,255,20,0.2)]"
           >
             <Chrome className="w-3.5 h-3.5" />
-            <span>{lang === 'fa' ? 'راهنمای نصب (کروم / فایرفاکس)' : 'Install (Chrome / Firefox)'}</span>
+            <span>{lang === 'fa' ? 'راهنمای نصب (فایرفاکس / کروم)' : 'Install (Firefox / Chrome)'}</span>
           </button>
 
           <button

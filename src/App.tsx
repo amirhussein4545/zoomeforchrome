@@ -9,7 +9,7 @@ import { CodeDiffView } from './components/TestPages/CodeDiffView';
 import { CustomContentView } from './components/TestPages/CustomContentView';
 import { ExtensionViewer } from './components/ExtensionViewer';
 import { InstallModal } from './components/InstallModal';
-import { MousePointerClick, ShieldCheck, Zap, Info } from 'lucide-react';
+import { MousePointerClick } from 'lucide-react';
 
 const STORAGE_KEY = 'zoom_box_pro_settings_v8';
 
@@ -131,12 +131,12 @@ export function App() {
         <footer className="border-t border-zinc-900 bg-zinc-950 py-6 px-4 text-center text-xs text-zinc-500 space-y-2">
           <div className="flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#39FF14]" />
-            <span className="font-semibold text-zinc-400">Zoom Box Pro • Chrome Extension v8.0.0</span>
+            <span className="font-semibold text-zinc-400">Zoom Box Pro • Firefox Extension v8.7.0</span>
           </div>
           <p className="text-[11px] text-zinc-600 max-w-md mx-auto">
             {lang === 'fa'
-              ? 'توسعه داده شده برای کروم با پشتیبانی از مانیفست نسخه ۳، ترنسفورم ماتریسی سخت‌افزاری و ذخیره‌سازی محلی'
-              : 'Built for Chrome with Manifest V3 support, matrix3d hardware-accelerated transformation, and local sync.'}
+              ? 'بهینه‌شده مخصوص فایرفاکس با مانیفست نسخه ۳، ایزولاسیون Shadow DOM، ترنسفورم سخت‌افزاری و ذخیره‌سازی محلی'
+              : 'Optimized for Mozilla Firefox with Manifest V3, Shadow DOM isolation, hardware-accelerated transform, and local sync.'}
           </p>
         </footer>
 

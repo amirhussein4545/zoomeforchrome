@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Sparkles } from 'lucide-react';
 
 interface Props {
   lang: 'fa' | 'en';

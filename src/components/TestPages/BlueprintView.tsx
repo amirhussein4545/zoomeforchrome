@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Zap, Compass, Maximize2 } from 'lucide-react';
+import { Cpu, Compass } from 'lucide-react';
 
 interface Props {
   lang: 'fa' | 'en';

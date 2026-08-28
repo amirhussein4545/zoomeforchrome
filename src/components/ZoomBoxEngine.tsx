@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ZoomSettings, SelectionRect, ZoomedRegion, ToastMessage } from '../types';
 import { FloatingControlPanel } from './FloatingControlPanel';
 import { NotificationToast } from './NotificationToast';
-import { X, ZoomIn, ZoomOut, Move, Download, Copy, Check } from 'lucide-react';
 
 interface ZoomBoxEngineProps {
   children: React.ReactNode;
@@ -32,7 +31,6 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
   const [isExitingZoom, setIsExitingZoom] = useState<boolean>(false);
   const [lensPos, setLensPos] = useState<{ x: number; y: number } | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [isCopied, setIsCopied] = useState<boolean>(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -251,15 +249,6 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
     setSelection(null);
   };
 
-  const handleCopySnapshot = () => {
-    setIsCopied(true);
-    showToast(
-      lang === 'fa' ? 'اطلاعات زوم کپی شد' : 'Zoom metadata copied to clipboard',
-      'success'
-    );
-    setTimeout(() => setIsCopied(false), 2000);
-  };
-
   // Convert hex color to rgba helper
   const hexToRgba = (hex: string, alpha: number) => {
     let cleanHex = hex.replace('#', '');
@@ -315,7 +304,7 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
       {selection && selection.width > 2 && (
         <div
           id="zoom-selection-box"
-          className="fixed z-[999985] pointer-events-none transition-[left,top,width,height] duration-75 ease-out rounded-sm animate-in fade-in zoom-in-[0.97] duration-150"
+          className="fixed z-[999985] pointer-events-none transition-[left,top,width,height] duration-75 ease-out rounded-sm zbp-anim-pop"
           style={{
             left: `${selection.left}px`,
             top: `${selection.top}px`,
@@ -356,7 +345,7 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
 
           {/* High-Precision Dimension Tag */}
           <div
-            className="absolute -top-7 left-0 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-md animate-in fade-in duration-200"
+            className="absolute -top-7 left-0 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-md zbp-anim-fade"
             style={{
               backgroundColor: '#09090b',
               color: settings.boxColor,
@@ -395,7 +384,7 @@ export const ZoomBoxEngine: React.FC<ZoomBoxEngineProps> = ({
       {zoomedRegion && (
         <div
           id="zoom-full-status-bar"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999988] bg-zinc-950 border-2 rounded-full px-5 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex items-center gap-4 text-xs font-mono animate-in fade-in slide-in-from-bottom-6 duration-200"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999988] bg-zinc-950 border-2 rounded-full px-5 py-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex items-center gap-4 text-xs font-mono zbp-anim-slide-up"
           style={{ borderColor: settings.boxColor }}
         >
           <div className="flex items-center gap-2">
